@@ -37,9 +37,9 @@ openstack_internal_subnet_gateway = "10.0.0.1"
 
 /* OpenStack NFS configuration */
 // NFS server /etc/exports NFS options: (rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
-// Need permission for cinder: 42407
+// Need permission for cinder UID, GID: 42407, 42400
 openstack_cinder_volumes_nfs_target = "172.29.0.105:/Storage/openstack/cinder"
-// Need permission for glance: 42415
+// Need permission for glance UID, GID: 42415, 42415
 openstack_glance_images_nfs_target = "172.29.0.105:/Storage/openstack/images"
-// Need permission for nova-compute: 42436
+// Need permission for nova-compute UID, GID: 42436, 42436
 openstack_nova_compute_instances_nfs_target = "172.29.0.105:/Storage/openstack/instances"

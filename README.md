@@ -60,11 +60,11 @@
             (rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
             
         - cinder
-            - 필요 권한 UID, GID: 42407
+            - 필요 권한 UID, GID: 42407, 42400
         - glance
-            - 필요 권한 UID, GID: 42415
+            - 필요 권한 UID, GID: 42415, 42415
         - nova-compute
-            - 필요 권한 UID, GID: 42436
+            - 필요 권한 UID, GID: 42436, 42436
         - 폴더 권한 예시
             
             ```bash
@@ -72,7 +72,7 @@
             total 20
             drwxr-xr-x  5     0     0 4096 Feb  2 11:00 .
             drwxr-xr-x 25     0     0 4096 Feb  2 10:59 ..
-            drwxr-xr-x  2 42407 42407 4096 Feb  3 11:10 cinder
+            drwxr-xr-x  2 42407 42400 4096 Feb  3 11:10 cinder
             drwxr-xr-x  2 42415 42415 4096 Feb  2 13:06 images
             drwxr-xr-x  5 42436 42436 4096 Feb  3 11:11 instances
             ```
