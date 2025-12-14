@@ -138,8 +138,6 @@ openstack_external_subnet_pool_start_ip_address = "192.168.110.180"
 openstack_external_subnet_pool_end_ip_address = "192.168.110.189"
 openstack_external_subnet_pool_gateway = "192.168.110.254"
 openstack_internal_subnet_range = "10.0.0.0/24"
-openstack_internal_subnet_gateway = "10.0.0.1"
-# openstack_router_enable_snat = false
 # openstack_create_cirros_test_image = true
 # openstack_cirros_test_image_version = "0.6.1"
 
@@ -281,13 +279,6 @@ openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/in
     - openstack_interanl_subnet_range
         - OpenStack 내부적으로 인스턴스에 사용할 서브넷 범위를 설정합니다.
         - 예시 : "10.0.0.0/24"
-    - openstack_internal_subnet_gateway
-        - OpenStack 내부적으로 인스턴스에 사용할 서브넷에서 사용할 게이트웨이 주소를 설정합니다. openstack_interanl_subnet_range 범위에 속하는 IP중 하나를 지정하여 설정하면 됩니다.
-        - 예시 : "10.0.0.1"
-    - openstack_router_enable_snat
-        - OpenStack 라우터에서 SNAT 기능을 사용할지 여부를 설정합니다. 활성화 된 경우 인스턴스는 openstack_interanl_subnet_range 서브넷 범위내에서 IP를 할당받고 외부로 나갈시 NAT를 통해 외부 주소로 변환되어 Floating IP를 할당하지 않고도 외부 통신이 가능합니다. 활성화 되어 있지 않은 경우 인스턴스가 외부로 통신하기 위해서는 Floating IP가 할당되어 있어야 합니다.
-        - 사용가능한 값 : true 또는 false
-        - 기본값 : false
     - openstack_create_cirros_test_image = true
         - OpenStack 설치가 완료되고 난 후 CirrOS 이미지를 구성합니다. 용량이 작은 이미지로 간단하게 인스턴스가 정상적으로 동작하는지 테스트하는 용도로 사용할 수 있습니다.
         - 사용가능한 값 : true 또는 false

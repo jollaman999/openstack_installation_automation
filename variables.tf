@@ -103,15 +103,7 @@ variable "openstack_external_subnet_pool_gateway" {
 variable "openstack_internal_subnet_range" {
   description = "OpenStack 내부 서브넷 범위"
 }
-variable "openstack_internal_subnet_gateway" {
-  description = "OpenStack 내부 서브넷 게이트웨이"
-}
 
-variable "openstack_router_enable_snat" {
-  description = "OpenStack 라우터 SNAT 사용 여부"
-  type = bool
-  default = false
-}
 variable "openstack_create_cirros_test_image" {
   description = "OpenStack CirrOS 테스트 이미지 생성"
   type = bool

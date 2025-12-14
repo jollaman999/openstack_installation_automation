@@ -30,8 +30,6 @@ openstack_external_subnet_pool_start_ip_address = "192.168.10.211"
 openstack_external_subnet_pool_end_ip_address = "192.168.10.250"
 openstack_external_subnet_pool_gateway = "192.168.10.1"
 openstack_internal_subnet_range = "10.0.10.0/24"
-openstack_internal_subnet_gateway = "10.0.10.1"
-# openstack_router_enable_snat = false
 # openstack_create_cirros_test_image = true
 # openstack_cirros_test_image_version = "0.6.1"
 

@@ -1732,7 +1732,7 @@ resource "null_resource" "post_install_setup_openstack_network_create_internal_n
             "#!/bin/bash",
             ". /etc/kolla/admin-openrc.sh",
             "echo \"[*] Creating OpenStack internal network...\"",
-            "openstack network create --internal internal",
+            "openstack network create --internal internal_only",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Error occurred while creating OpenStack internal network.\"",
@@ -1759,7 +1759,7 @@ resource "null_resource" "post_install_setup_openstack_network_create_internal_s
             "#!/bin/bash",
             ". /etc/kolla/admin-openrc.sh",
             "echo \"[*] Creating OpenStack internal subnet...\"",
-            "openstack subnet create --dhcp --subnet-range ${var.openstack_internal_subnet_range} --network internal internal_subnet",
+            "openstack subnet create --dhcp --gateway none --subnet-range ${var.openstack_internal_subnet_range} --network internal internal_subnet",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Error occurred while creating OpenStack internal subnet.\"",
@@ -1769,95 +1769,9 @@ resource "null_resource" "post_install_setup_openstack_network_create_internal_s
     }
 }
 
-resource "null_resource" "post_install_setup_openstack_network_create_openstack_router" {
-    depends_on = [
-        null_resource.post_install_setup_openstack_network_create_internal_subnet
-    ]
-
-    connection {
-        type     = "ssh"
-        user     = "root"
-        password = var.openstack_nodes_ssh_root_password
-        host     = var.controller_node_internal_ip_address
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "#!/bin/bash",
-            ". /etc/kolla/admin-openrc.sh",
-            "echo \"[*] Creating OpenStack router...\"",
-            "openstack router create external-router",
-            "STATUS=`echo $?`",
-            "if [ $STATUS != 0 ]; then",
-            "  echo \"[!] Error occurred while creating OpenStack router.\"",
-            "  exit 1",
-            "fi"
-        ]
-    }
-}
-
-resource "null_resource" "post_install_setup_openstack_network_setting_openstack_router" {
-    depends_on = [
-        null_resource.post_install_setup_openstack_network_create_openstack_router
-    ]
-
-    connection {
-        type     = "ssh"
-        user     = "root"
-        password = var.openstack_nodes_ssh_root_password
-        host     = var.controller_node_internal_ip_address
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "#!/bin/bash",
-            ". /etc/kolla/admin-openrc.sh",
-            "echo \"[*] Setting OpenStack router...\"",
-            "ROUTER_SNAT_OPTION=\"--disable-snat\"",
-            "ENABLE_ROUTER_SNAT=`echo \"${var.openstack_router_enable_snat}\" | tr '[:upper:]' '[:lower:]'`",
-            "if [ \"$ENABLE_ROUTER_SNAT\" = \"true\" ]; then",
-            "  ROUTER_SNAT_OPTION=\"--enable-snat\"",
-            "fi",
-            "openstack router set --external-gateway external $${ROUTER_SNAT_OPTION} external-router",
-            "STATUS=`echo $?`",
-            "if [ $STATUS != 0 ]; then",
-            "  echo \"[!] Error occurred while setting OpenStack router.\"",
-            "  exit 1",
-            "fi"
-        ]
-    }
-}
-
-resource "null_resource" "post_install_setup_openstack_network_add_internal_subnet_to_openstack_router" {
-    depends_on = [
-        null_resource.post_install_setup_openstack_network_setting_openstack_router
-    ]
-
-    connection {
-        type     = "ssh"
-        user     = "root"
-        password = var.openstack_nodes_ssh_root_password
-        host     = var.controller_node_internal_ip_address
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "#!/bin/bash",
-            ". /etc/kolla/admin-openrc.sh",
-            "echo \"[*] Adding internal subnet to OpenStack router...\"",
-            "openstack router add subnet external-router internal_subnet",
-            "STATUS=`echo $?`",
-            "if [ $STATUS != 0 ]; then",
-            "  echo \"[!] Error occurred while setting OpenStack router.\"",
-            "  exit 1",
-            "fi"
-        ]
-    }
-}
-
 resource "null_resource" "post_install_setup_openstack_network_create_ssh_security_group" {
     depends_on = [
-        null_resource.post_install_setup_openstack_network_add_internal_subnet_to_openstack_router
+        null_resource.post_install_setup_openstack_network_create_internal_network
     ]
 
     connection {
