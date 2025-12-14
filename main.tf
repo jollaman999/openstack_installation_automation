@@ -1380,7 +1380,7 @@ resource "null_resource" "fix_issues_nfs_mount_on_boot_issue" {
     }
 }
 
-####### Fix Instance Create Timeout Issue ######
+###### Fix Instance Create Timeout Issue ######
 resource "null_resource" "fix_issues_instance_create_timeout_issue" {
     depends_on = [
         null_resource.fix_issues_nfs_mount_on_boot_issue
@@ -1404,9 +1404,33 @@ resource "null_resource" "fix_issues_instance_create_timeout_issue" {
     }
 }
 
-resource "null_resource" "fix_issues_glance_cors" {
+###### Fix Instance Create Timeout Issue ######
+resource "null_resource" "fix_issues_octavia_timeout_issue" {
     depends_on = [
         null_resource.fix_issues_instance_create_timeout_issue
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.compute_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "sed -i '/compute_active_retries/d' /etc/kolla/octavia-worker/octavia.conf",
+            "sed -i '/compute_active_wait_sec/d' /etc/kolla/octavia-worker/octavia.conf",
+            "sed -i 's/\\[controller_worker\\]/& \\ncompute_active_retries = 900\\ncompute_active_wait_sec = 6/' /etc/kolla/octavia-worker/octavia.conf",
+            "podman restart octavia_worker"
+        ]
+    }
+}
+
+resource "null_resource" "fix_issues_glance_cors" {
+    depends_on = [
+        null_resource.fix_issues_octavia_timeout_issue
     ]
 
     connection {
@@ -1953,6 +1977,87 @@ resource "null_resource" "post_install_create_flavors" {
             "openstack flavor create large --id large --ram 16384 --disk 80 --vcpus 8",
             "openstack flavor create xlarge --id xlarge --ram 32768 --disk 100 --vcpus 16",
             "openstack flavor create superlarge --id superlarge --ram 65536 --disk 120 --vcpus 32"
+        ]
+    }
+}
+
+############# Create amphora Image #############
+resource "null_resource" "post_install_create_amphora_image" {
+    depends_on = [
+        null_resource.post_install_create_flavors
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Creating Amphora image...\"",
+            "",
+            "cd ${local.openstack_tmp_dir}",
+            "git clone https://opendev.org/openstack/octavia -b stable/2025.2",
+            "",
+            "apt install -y debootstrap qemu-utils e2fsprogs policycoreutils-python-utils kpartx",
+            "pip3 install diskimage-builder",
+            "cd octavia/diskimage-create",
+            "./diskimage-create.sh",
+            "",
+            ". /etc/kolla/admin-openrc.sh",
+            "openstack image create amphora-x64-haproxy.qcow2 --container-format bare --disk-format qcow2 --private --tag amphora --file amphora-x64-haproxy.qcow2 --property hw_architecture='x86_64' --property hw_rng_model=virtio"
+        ]
+    }
+}
+
+############# Setting loadbalancer Interface #############
+resource "null_resource" "post_install_setup_loadbalancer_interface" {
+    depends_on = [
+        null_resource.post_install_create_amphora_image
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Setting Octavia loadbalancer interface...\"",
+            ". /etc/kolla/admin-openrc.sh",
+            "pip install python-openstackclient python-glanceclient python-neutronclient",
+            "openstack port create octavia-hm-port01 --host $HOSTNAME --network lb-mgmt-net",
+            "",
+            "export MGMT_PORT_ID=$(openstack port show octavia-hm-port01 | awk '/ id /{print $4}')",
+            "export MGMT_PORT_MAC=$(openstack port show octavia-hm-port01 | awk '/mac_address / {print $4}')",
+            "export HMIP=$(openstack port show octavia-hm-port01 | awk '/ fixed_ips /{print $4}' | cut -d \"'\" -f 2)",
+            "",
+            "podman exec ovn_controller ovs-vsctl -- del-port br-int octavia-hm0",
+            "podman exec ovn_controller ovs-vsctl -- --may-exist add-port br-int octavia-hm0 -- set Interface octavia-hm0 type=internal -- set Interface octavia-hm0 external-ids:facestatus=active -- set Interface octavia-hm0 external-ids:attached-mac=$${MGMT_PORT_MAC} -- set Interface octavia-hm0 external-ids:iface-id=$${MGMT_PORT_ID}",
+            "ip link set dev octavia-hm0 address $${MGMT_PORT_MAC}",
+            "ifconfig octavia-hm0 $${HMIP}/24",
+            "",
+            "echo \"[*] Creating netplan configuration for Octavia loadbalancer interface...\"",
+            "cat << EOF > /etc/netplan/999-octavia.yaml",
+            "network:",
+            "  version: 2",
+            "  ethernets:",
+            "    octavia-hm0:",
+            "      match:",
+            "        name: octavia-hm0",
+            "      set-name: octavia-hm0",
+            "      dhcp4: no",
+            "      addresses:",
+            "        - $${HMIP}/24",
+            "EOF",
+            "chmod 600 /etc/netplan/999-octavia.yaml",
+            "netplan apply"
         ]
     }
 }
