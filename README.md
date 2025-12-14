@@ -31,7 +31,22 @@
     - NIC 1개
         - Internal: 내부 통신용 1개
 
-## 2. 사전 필요 설정 사항
+## 2. 설치 후 사용 가능한 서비스
+
+### 핵심 서비스
+- **Keystone** - Identity 서비스
+- **Glance** - Image 서비스
+- **Nova** - Compute 서비스
+- **Neutron** - Networking 서비스 (OVN 플러그인)
+- **Cinder** - Block Storage 서비스 (NFS 백엔드)
+- **Horizon** - Dashboard 서비스
+
+### 추가 서비스
+- **Octavia** - Load Balancing 서비스
+- **Heat** - Orchestration 서비스
+- **Manila** - Shared File System 서비스
+
+## 3. 사전 필요 설정 사항
 
 - Controller 노드
     - NIC
@@ -86,7 +101,7 @@
             /Storage/openstack/instances 172.29.0.0/255.255.255.0(rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
             ```
 
-## 3. 설치 옵션 변수 설정
+## 4. 설치 옵션 변수 설정
 
 terraform.tfvars 파일을 열어 설치에 필요한 변수들을 설정합니다.
 
@@ -300,7 +315,7 @@ openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/in
         - NFS 서버에서 해당 폴더의 UID, GID 권한은 42436으로 설정되어 있어야 합니다.
         - 예시 : "172.29.0.10:/Storage/openstack/instances"
 
-## 4. 자동화 설치 스크립트 실행
+## 5. 자동화 설치 스크립트 실행
 
 Controller 노드에서 자동화 스크립트를 실행합니다.
 
@@ -322,7 +337,7 @@ Do you want to perform these actions?
 [*] Please reboot the system.
 ```
 
-## 5. 로그 확인
+## 6. 로그 확인
 
 설치 과정 중에 출력된 메세지들은 스크립트 실행 폴더에 `log.out` 이라는 파일로 기록됩니다.
 
@@ -330,7 +345,7 @@ Do you want to perform these actions?
 vi log.out
 ```
 
-## 6. Terraform State 파일 정리
+## 7. Terraform State 파일 정리
 
 Terraform 설치 스크립트를 실행하면서 저장된 State를 초기화 하기 위해서는 스크립트 실행 폴더에 있는 `clean_terraform_states.sh` 스크립트를 실행합니다.
 
