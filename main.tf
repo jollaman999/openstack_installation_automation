@@ -1719,7 +1719,7 @@ resource "null_resource" "post_install_setup_openstack_network_create_internal_s
             "#!/bin/bash",
             ". /etc/kolla/admin-openrc.sh",
             "echo \"[*] Creating OpenStack internal subnet...\"",
-            "openstack subnet create --dhcp --subnet-range ${var.openstack_internal_subnet_range} --gateway ${var.openstack_internal_subnet_gateway} --network internal internal_subnet",
+            "openstack subnet create --dhcp --subnet-range ${var.openstack_internal_subnet_range} --network internal internal_subnet",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Error occurred while creating OpenStack internal subnet.\"",
