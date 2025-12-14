@@ -1,36 +1,3 @@
-/* Infra Configuration Settings */
-enable_infra_configuration = false
-// iSCSI
-iscsi_server_ip_address = "172.19.0.1"
-iscsi_server_ssh_root_password = "****"
-# iscsi_os_volume_target_name_controller_node="iqn.openstack-controller_terraform.target"
-# iscsi_os_volume_target_name_compute_node="iqn.openstack-compute_terraform.target"
-iscsi_os_volume_snapshot_name_controller_node = "volmgmt/openstack_controller_no_cloud_init_script@init"
-iscsi_os_volume_snapshot_name_compute_node = "volmgmt/openstack_compute_no_cloud_init_script@init"
-iscsi_os_volume_clone_name_controller_node = "volmgmt/openstack_controller_terraform"
-iscsi_os_volume_clone_name_compute_node = "volmgmt/openstack_compute_terraform"
-iscsi_os_volume_size_controller_node = "100G"
-iscsi_os_volume_size_compute_node = "100G"
-iscsi_os_volume_root_uuid_controller_node = "e3e9e4e9-2093-497d-8837-b92cff8302fa"
-iscsi_os_volume_root_uuid_compute_node = "e3e9e4e9-2093-497d-8837-b92cff8302fa"
-// DHCP
-dhcp_server_ip_address = "192.168.110.240"
-dhcp_server_ssh_root_password = "hcc123!Q"
-dhcp_tftp_server_ip_address = "172.19.0.1"
-dhcp_tftp_server_ssh_root_password = "****"
-dhcp_tftp_server_exported_folder_location = "/volmgmt/boottp"
-# dhcp_pxe_target_folder_name = "openstack_auto_install_terraform"
-dhcp_nodes_internal_gateway_ip_address = "172.19.0.10"
-dhcp_mac_address_controller_node = "a4:bf:01:5a:b2:33"
-dhcp_mac_address_compute_node = "a4:bf:01:5a:b0:03"
-// IPMI
-ipmi_ip_address_controller_node = "172.31.0.1"
-ipmi_user_name_controller_node = "admin"
-ipmi_user_password_controller_node = "****"
-ipmi_ip_address_compute_node = "172.31.0.2"
-ipmi_user_name_compute_node = "admin"
-ipmi_user_password_compute_node = "****"
-
 /* Node Settings */
 openstack_nodes_ssh_root_password = "****"
 // controller
