@@ -36,10 +36,10 @@ resource "null_resource" "pre_check_os" {
         inline = [
             "#!/bin/bash",
             "CHECK_OS_ID=`lsb_release -i | grep -i \"ubuntu\" > /dev/null 2>&1 ; echo $?`",
-            "CHECK_OS_RELEASE=`lsb_release -r | grep -i \"22.04\" > /dev/null 2>&1 ; echo $?`",
+            "CHECK_OS_RELEASE=`lsb_release -r | grep -i \"24.04\" > /dev/null 2>&1 ; echo $?`",
             "echo \"[*] Checking OS version...\"",
             "if [ $CHECK_OS_ID != \"0\" ] || [ $CHECK_OS_RELEASE != \"0\" ]; then",
-            "  echo \"[!] This script only supports Ubuntu 22.04.\"",
+            "  echo \"[!] This script only supports Ubuntu 24.04.\"",
             "  exit 1",
             "fi"
         ]
@@ -721,11 +721,11 @@ resource "null_resource" "install_kolla_ansible_install_kolla" {
 
     # Use cloned kolla-ansible folder
     # Remote: https://opendev.org/openstack/kolla-ansible
-    # Branch: stable/zed
-    # Commit Hash: 033da7aa309aa25f3f4e6bdbb26f574c80819168
+    # Branch: stable/2025.2
+    # Commit Hash: da49c372835280d5d37719d39ff795e9ab7d5c61
 
     # echo "[*] Cleaning Kolla Ansible folder..."
-    # git clone --branch stable/zed https://opendev.org/openstack/kolla-ansible $RUN_PATH/kolla-ansible
+    # git clone --branch stable/2025.2 https://opendev.org/openstack/kolla-ansible $RUN_PATH/kolla-ansible
     # STATUS=`echo $?`
     # if [ $STATUS != 0 ]; then
     #   echo "[!] Failed to clone Kolla Ansible."
