@@ -1430,7 +1430,7 @@ resource "null_resource" "fix_issues_octavia_timeout_issue" {
         type     = "ssh"
         user     = "root"
         password = var.openstack_nodes_ssh_root_password
-        host     = var.compute_node_internal_ip_address
+        host     = var.controller_node_internal_ip_address
     }
 
     provisioner "remote-exec" {
@@ -1453,7 +1453,7 @@ resource "null_resource" "fix_issues_glance_cors" {
         type     = "ssh"
         user     = "root"
         password = var.openstack_nodes_ssh_root_password
-        host     = var.compute_node_internal_ip_address
+        host     = var.controller_node_internal_ip_address
     }
 
     provisioner "remote-exec" {
