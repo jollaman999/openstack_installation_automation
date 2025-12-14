@@ -61,9 +61,9 @@
             
         - cinder
             - 필요 권한 UID, GID: 42407, 42400
-        - glance
+        - images
             - 필요 권한 UID, GID: 42415, 42415
-        - nova-compute
+        - instances
             - 필요 권한 UID, GID: 42436, 42436
         - 폴더 권한 예시
             
