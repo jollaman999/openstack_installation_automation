@@ -1134,6 +1134,13 @@ resource "null_resource" "nfs_configuration_configure_compute_node" {
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to modify compute node's fstab file.\"",
             "  exit 1",
+            "fi",
+            "echo \"[*] Creating Nova live migration mount directory...\"",
+            "mkdir -p /var/lib/nova/mnt",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to create /var/lib/nova/mnt directory.\"",
+            "  exit 1",
             "fi"
         ]
     }
