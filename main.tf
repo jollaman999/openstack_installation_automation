@@ -959,6 +959,8 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_global_v
             "cp -f /etc/kolla/globals.yml /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^kolla_base_distro:.*/kolla_base_distro: \"ubuntu\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#kolla_base_distro:.*/kolla_base_distro: \"ubuntu\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^kolla_container_engine:.*/kolla_container_engine: \"podman\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#kolla_container_engine:.*/kolla_container_engine: \"podman\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^network_interface:.*/network_interface: '\"${var.controller_node_internal_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#network_interface:.*/network_interface: '\"${var.controller_node_internal_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^kolla_external_vip_interface::.*/kolla_external_vip_interface: '\"${var.controller_node_external_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
@@ -971,6 +973,8 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_global_v
             "sed -i 's/^#kolla_external_vip_address:.*/kolla_external_vip_address: '\"${var.openstack_vip_external}\"'/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^docker_registry_insecure:.*/docker_registry_insecure: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#docker_registry_insecure:.*/docker_registry_insecure: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^podman_registry_insecure:.*/podman_registry_insecure: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#podman_registry_insecure:.*/podman_registry_insecure: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^kolla_enable_tls_internal:.*/kolla_enable_tls_internal: \"no\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#kolla_enable_tls_internal:.*/kolla_enable_tls_internal: \"no\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^kolla_enable_tls_external:.*/kolla_enable_tls_external: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
@@ -1094,7 +1098,7 @@ resource "null_resource" "nfs_configuration_configure_controller_node" {
             "fi",
             "echo \"[*] Adding Glance Images NFS target to fstab...\"",
             "sed -i '/glance/d' /etc/fstab",
-            "echo \"${var.openstack_glance_images_nfs_target} /var/lib/docker/volumes/glance/_data/images nfs defaults,_netdev 0 0\" >> /etc/fstab",
+            "echo \"${var.openstack_glance_images_nfs_target} /var/lib/containers/storage/volumes/glance/_data/images nfs defaults,_netdev 0 0\" >> /etc/fstab",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to modify controller node's fstab file.\"",
@@ -1121,7 +1125,7 @@ resource "null_resource" "nfs_configuration_configure_compute_node" {
             "#!/bin/bash",
             "echo \"[*] Adding Nova Compute NFS target to fstab...\"",
             "sed -i '/nova_compute/d' /etc/fstab",
-            "echo \"${var.openstack_nova_compute_instances_nfs_target} /var/lib/docker/volumes/nova_compute/_data/instances nfs defaults,_netdev 0 0\" >> /etc/fstab",
+            "echo \"${var.openstack_nova_compute_instances_nfs_target} /var/lib/containers/storage/volumes/nova_compute/_data/instances nfs defaults,_netdev 0 0\" >> /etc/fstab",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to modify compute node's fstab file.\"",
@@ -1400,7 +1404,7 @@ resource "null_resource" "fix_issues_instance_create_timeout_issue" {
             "sed -i '/block_device_allocate_retries/d' /etc/kolla/nova-compute/nova.conf",
             "sed -i '/block_device_allocate_retries_interval/d' /etc/kolla/nova-compute/nova.conf",
             "sed -i 's/\\[DEFAULT\\]/& \\nblock_device_allocate_retries = 1800\\nblock_device_allocate_retries_interval = 6/' /etc/kolla/nova-compute/nova.conf",
-            "docker restart nova_compute"
+            "podman restart nova_compute"
         ]
     }
 }
@@ -1422,7 +1426,7 @@ resource "null_resource" "fix_issues_glance_cors" {
             "#!/bin/bash",
             "sed -i '/allowed_origin/d' /etc/kolla/glance-api/glance-api.conf",
             "sed -i 's/\\[cors\\]/& \\nallowed_origin = \\*/' /etc/kolla/glance-api/glance-api.conf",
-            "docker restart glance_api"
+            "podman restart glance_api"
         ]
     }
 }
