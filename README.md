@@ -5,29 +5,29 @@
 - 필요 노드 3대 (Controller 노드, Compute 노드, Storage 노드)
 - Controller 노드 요구 사항
     - CPU: 4Core 이상
-    - RAM: 8GB 이상
-    - Disk: 10GB 이상
+    - RAM: 16GB 이상
+    - Disk: 30GB 이상
     - NIC 2개
         - External: 외부 통신용 1개
         - Internal: 내부 통신용 1개
-    - OS: Ubuntu 20.04 LTS
-    - Kernel: 4.15+, IPv6 Enabled
-    - Python 3.6.x~3.7.x
+    - OS: Ubuntu 24.04 LTS
+    - Kernel: IPv6 Enabled
+    - Python 3.12.x
     - SSH Server Installed
 - Compute 노드 요구 사항
-    - CPU: 솔루션 설치를 위해 16Core 이상 권장, 가상화 활성화
-    - RAM: 솔루션 설치를 위해 32GB 이상 권장
-    - Disk:  10GB 이상
+    - CPU: (사용할 인스턴스 개수 * 인스턴스 당 권장 Core 수) 이상, 가상화 활성화
+    - RAM: (사용할 인스턴스 개수 * 인스턴스 당 권장 RAM) 이상
+    - Disk:  25GB 이상
     - NIC 2개
         - External: 외부 통신용 1개
         - Internal: 내부 통신용 1개
-    - OS: Ubuntu 20.04 LTS
-    - Kernel: 4.15+, IPv6 Enable, KVM Enabled
-    - Python 3.6.x~3.7.x
+    - OS: Ubuntu 24.04 LTS
+    - Kernel: IPv6 Enable, KVM Enabled
+    - Python 3.12.x
     - SSH Server Installed
 - Storage 노드 요구 사항
     - NFS 서버 활성화
-    - Disk: 1TB 이상 권장
+    - Disk: (사용할 인스턴스 개수 * 인스턴스 별 OS 디스크 용량) 이상
     - NIC 1개
         - Internal: 내부 통신용 1개
 
