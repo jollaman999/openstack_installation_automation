@@ -18,11 +18,6 @@ locals {
 # pre-check
 ##########################################
 resource "null_resource" "pre_check_os" {
-    depends_on = [
-        null_resource.ipmi_wait_controller_node,
-        null_resource.ipmi_wait_compute_node
-    ]
-
     for_each = local.hosts_ips
 
     connection {
