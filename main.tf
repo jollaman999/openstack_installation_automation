@@ -678,7 +678,7 @@ resource "null_resource" "install_kolla_ansible_install_needed_python_packages" 
         inline = [
             "#!/bin/bash",
             "echo \"[*] Installing pip...\"",
-            "pip3 install --break-system-packages -U pip",
+            "apt install -y python3-pip",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install pip.\"",
@@ -739,6 +739,7 @@ resource "null_resource" "install_kolla_ansible_install_kolla" {
             "  tar xvf ${local.openstack_tmp_dir}/kolla-ansible.tar.gz -C ${local.openstack_tmp_dir}/",
             "fi",
             "git config --global --add safe.directory ${local.openstack_tmp_dir}/kolla-ansible",
+            "apt purge -y python3-rich",
             "pip3 install --break-system-packages ${local.openstack_tmp_dir}/kolla-ansible",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
