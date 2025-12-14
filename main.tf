@@ -904,6 +904,7 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_password
             "sed -i '/nova_api_database_password/d' /etc/kolla/passwords.yml",
             "sed -i '/nova_database_password/d' /etc/kolla/passwords.yml",
             "sed -i '/placement_database_password/d' /etc/kolla/passwords.yml",
+            "sed -i '/manila_database_password/d' /etc/kolla/passwords.yml",
             "sed -i '/octavia_ca_password/d' /etc/kolla/passwords.yml",
             "sed -i '/octavia_client_ca_password/d' /etc/kolla/passwords.yml",
             "sed -i '/octavia_database_password/d' /etc/kolla/passwords.yml",
@@ -920,6 +921,7 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_password
             "echo \"nova_api_database_password: ${var.openstack_databases_password}\" >> /etc/kolla/passwords.yml",
             "echo \"nova_database_password: ${var.openstack_databases_password}\" >> /etc/kolla/passwords.yml",
             "echo \"placement_database_password: ${var.openstack_databases_password}\" >> /etc/kolla/passwords.yml",
+            "echo \"manila_database_password:  ${var.openstack_databases_password}\" >> /etc/kolla/passwords.yml",
             "echo \"octavia_ca_password: ${var.openstack_octavia_ca_password}\" >> /etc/kolla/passwords.yml",
             "echo \"octavia_client_ca_password: ${var.openstack_octavia_client_ca_password}\" >> /etc/kolla/passwords.yml",
             "echo \"octavia_database_password: ${var.openstack_databases_password}\" >> /etc/kolla/passwords.yml",
@@ -998,6 +1000,10 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_global_v
             "sed -i 's/^#enable_redis:.*/enable_redis: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^neutron_ovn_distributed_fip:.*/neutron_ovn_distributed_fip: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#neutron_ovn_distributed_fip:.*/neutron_ovn_distributed_fip: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^enable_manila:.*/enable_manila: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#enable_manila:.*/enable_manila: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^enable_manila_backend_generic:.*/enable_manila_backend_generic: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#enable_manila_backend_generic:.*/enable_manila_backend_generic: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i '/neutron_plugin_agent/d' /etc/kolla/globals.d/globals.yml",
             "echo 'neutron_plugin_agent: \"ovn\"' >> /etc/kolla/globals.d/globals.yml",
             "sed -i '/openstack_cacert/d' /etc/kolla/globals.d/globals.yml",
@@ -2058,6 +2064,141 @@ resource "null_resource" "post_install_setup_loadbalancer_interface" {
             "EOF",
             "chmod 600 /etc/netplan/999-octavia.yaml",
             "netplan apply"
+        ]
+    }
+}
+
+############# Setup Manila Service #############
+resource "null_resource" "post_install_manila_download_service_image" {
+    depends_on = [
+        null_resource.post_install_setup_loadbalancer_interface
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Downloading Manila service image...\"",
+            "cd ${local.openstack_tmp_dir}",
+            "wget http://tarballs.openstack.org/manila-image-elements/images/manila-service-image-master.qcow2",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to download Manila service image.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
+resource "null_resource" "post_install_manila_create_service_image" {
+    depends_on = [
+        null_resource.post_install_manila_download_service_image
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Creating Manila service image in OpenStack...\"",
+            ". /etc/kolla/admin-openrc.sh",
+            "openstack image create manila-service-image --file ${local.openstack_tmp_dir}/manila-service-image-master.qcow2 --disk-format qcow2 --container-format bare --public",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to create Manila service image.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
+resource "null_resource" "post_install_manila_create_service_flavor" {
+    depends_on = [
+        null_resource.post_install_manila_create_service_image
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Creating Manila service flavor...\"",
+            ". /etc/kolla/admin-openrc.sh",
+            "openstack flavor create manila-service-flavor --id 100 --ram 4096 --disk 4 --vcpus 4",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to create Manila service flavor.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
+resource "null_resource" "post_install_manila_install_client" {
+    depends_on = [
+        null_resource.post_install_manila_create_service_flavor
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Installing Manila client...\"",
+            "pip install python-manilaclient",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to install Manila client.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
+resource "null_resource" "post_install_manila_create_share_type" {
+    depends_on = [
+        null_resource.post_install_manila_install_client
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Creating Manila share type with snapshot support...\"",
+            ". /etc/kolla/admin-openrc.sh",
+            "openstack share type create default_share_type true --extra-specs share_backend_name=GENERIC snapshot_support=True",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to create Manila share type.\"",
+            "  exit 1",
+            "fi"
         ]
     }
 }
