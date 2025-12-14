@@ -1028,6 +1028,8 @@ resource "null_resource" "install_kolla_ansible_generate_certificates" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Generating certificates...\"",
+            "mkdir -p /etc/kolla/ansible/inventory/",
+            "cp -f ${local.openstack_tmp_dir}/multinode  /etc/kolla/ansible/inventory/all-in-one",
             "kolla-ansible certificates",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
@@ -1147,7 +1149,7 @@ resource "null_resource" "deploy_openstack_bootstrap_servers" {
             "#!/bin/bash",
             "echo \"[*] Bootstrapping servers...\"",
             "kolla-ansible install-deps",
-            "kolla-ansible -i ${local.openstack_tmp_dir}/multinode bootstrap-servers",
+            "kolla-ansible bootstrap-servers",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Kolla Ansible bootstrap failed.\"",
@@ -1199,7 +1201,7 @@ resource "null_resource" "deploy_openstack_run_prechecks" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Running precheks...\"",
-            "kolla-ansible -i ${local.openstack_tmp_dir}/multinode prechecks",
+            "kolla-ansible prechecks",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Kolla Ansible prechecks failed.\"",
@@ -1225,7 +1227,7 @@ resource "null_resource" "deploy_openstack_run_pull" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Running precheks...\"",
-            "kolla-ansible -i ${local.openstack_tmp_dir}/multinode pull",
+            "kolla-ansible pull",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Kolla Ansible pull failed.\"",
@@ -1251,7 +1253,7 @@ resource "null_resource" "deploy_openstack_run_deploy" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Deploying OpenStack...\"",
-            "kolla-ansible -i ${local.openstack_tmp_dir}/multinode deploy",
+            "kolla-ansible deploy",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Kolla Ansible deploy failed.\"",
