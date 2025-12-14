@@ -993,6 +993,8 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_global_v
             "sed -i 's/^#enable_neutron_provider_networks:.*/enable_neutron_provider_networks: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^enable_octavia:.*/enable_octavia: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#enable_octavia:.*/enable_octavia: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^enable_valkey:.*/enable_valkey: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#enable_valkey:.*/enable_valkey: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^enable_openvswitch:.*/enable_openvswitch: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#enable_openvswitch:.*/enable_openvswitch: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^enable_ovn:.*/enable_ovn: \"yes\"/g' /etc/kolla/globals.d/globals.yml",
