@@ -154,7 +154,7 @@ openstack_external_subnet_pool_end_ip_address = "192.168.110.189"
 openstack_external_subnet_pool_gateway = "192.168.110.254"
 openstack_internal_subnet_range = "10.0.0.0/24"
 # openstack_create_cirros_test_image = true
-# openstack_cirros_test_image_version = "0.6.1"
+# openstack_cirros_test_image_version = "0.6.3"
 
 /* OpenStack NFS configuration */
 // NFS server /etc/exports NFS options: (rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
@@ -312,10 +312,10 @@ openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/in
         - OpenStack 설치가 완료되고 난 후 CirrOS 이미지를 구성합니다. 용량이 작은 이미지로 간단하게 인스턴스가 정상적으로 동작하는지 테스트하는 용도로 사용할 수 있습니다.
         - 사용가능한 값 : true 또는 false
         - 기본값 : true
-    - openstack_cirros_test_image_version = "0.6.1"
+    - openstack_cirros_test_image_version = "0.6.3"
         - CirrOS 이미지 구성시 사용할 버전을 설정합니다.
         - 버전 참고 : [https://github.com/cirros-dev/cirros/tags](https://github.com/cirros-dev/cirros/tags)
-        - 기본값 : "0.6.1"
+        - 기본값 : "0.6.3"
 - OpenStack NFS 마운트 경로 설정
     
     NFS Server에서 /etc/exports 파일에 각 폴더의 옵션을 다음과 같이 설정합니다.

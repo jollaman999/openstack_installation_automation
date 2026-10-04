@@ -116,7 +116,7 @@ variable "openstack_create_cirros_test_image" {
 }
 variable "openstack_cirros_test_image_version" {
   description = "OpenStack CirrOS 테스트 이미지 버전"
-  default = "0.6.1"
+  default = "0.6.3"
   type = string
 }
 

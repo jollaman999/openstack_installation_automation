@@ -37,7 +37,7 @@ openstack_external_subnet_pool_end_ip_address = "192.168.10.250"
 openstack_external_subnet_pool_gateway = "192.168.10.1"
 openstack_internal_subnet_range = "10.0.10.0/24"
 # openstack_create_cirros_test_image = true
-# openstack_cirros_test_image_version = "0.6.1"
+# openstack_cirros_test_image_version = "0.6.3"
 
 /* OpenStack NFS configuration */
 // NFS server /etc/exports NFS options: (rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
