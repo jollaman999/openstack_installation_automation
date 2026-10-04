@@ -13,6 +13,9 @@ locals {
     # Hosts running the compute role (the controller itself when all-in-one)
     compute_role_ips = var.all_in_one ? toset([var.controller_node_internal_ip_address]) : toset([for node in values(local.compute_nodes) : node.internal_ip_address])
 
+    # OpenStack release (must match the bundled kolla-ansible branch)
+    openstack_release = "2026.1"
+
     # OpenStack Temp Directory
     openstack_tmp_dir = "/root/openstack_tmp"
 
@@ -739,7 +742,7 @@ resource "null_resource" "install_kolla_ansible_install_needed_python_packages" 
             "  exit 1",
             "fi",
             "echo \"[*] Installing Ansible...\"",
-            "pip3 install --break-system-packages ansible==8.7.0",
+            "pip3 install --break-system-packages 'ansible-core>=2.19,!=2.19.0,<2.21'",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install Ansible.\"",
@@ -763,11 +766,11 @@ resource "null_resource" "install_kolla_ansible_install_kolla" {
 
     # Use cloned kolla-ansible folder
     # Remote: https://opendev.org/openstack/kolla-ansible
-    # Branch: stable/2025.2
-    # Commit Hash: da49c372835280d5d37719d39ff795e9ab7d5c61
+    # Branch: stable/2026.1
+    # Commit Hash: ed01be2239b37fc84a8d7843e4e6c9bd57ca1303
 
     # echo "[*] Cleaning Kolla Ansible folder..."
-    # git clone --branch stable/2025.2 https://opendev.org/openstack/kolla-ansible $RUN_PATH/kolla-ansible
+    # git clone --branch stable/2026.1 https://opendev.org/openstack/kolla-ansible $RUN_PATH/kolla-ansible
     # STATUS=`echo $?`
     # if [ $STATUS != 0 ]; then
     #   echo "[!] Failed to clone Kolla Ansible."
@@ -1993,7 +1996,7 @@ resource "null_resource" "post_install_create_amphora_image" {
             "#!/bin/bash",
             "echo \"[*] Creating Amphora image...\"",
             "cd ${local.openstack_tmp_dir}",
-            "git clone https://opendev.org/openstack/octavia -b stable/2025.2",
+            "git clone https://opendev.org/openstack/octavia -b stable/${local.openstack_release}",
             "apt install -y debootstrap qemu-utils e2fsprogs policycoreutils-python-utils kpartx",
             "pip3 install --break-system-packages diskimage-builder",
             "cd octavia/diskimage-create",
