@@ -795,6 +795,13 @@ resource "null_resource" "install_kolla_ansible_install_kolla" {
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install Kolla Ansible.\"",
             "  exit 1",
+            "fi",
+            "echo \"[*] Installing Kolla Ansible dependencies...\"",
+            "kolla-ansible install-deps",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to install Kolla Ansible dependencies.\"",
+            "  exit 1",
             "fi"
         ]
     }
@@ -1225,7 +1232,6 @@ resource "null_resource" "deploy_openstack_bootstrap_servers" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Bootstrapping servers...\"",
-            "kolla-ansible install-deps",
             "kolla-ansible bootstrap-servers",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
