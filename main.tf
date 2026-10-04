@@ -2053,7 +2053,7 @@ resource "null_resource" "post_install_create_amphora_image" {
             "fi",
             "echo \"[*] Building Amphora image...\"",
             "SUDO_WS_PATH=",
-            "if [ -x /usr/bin/sudo.ws ]; then",
+            "if [ -x /usr/bin/sudo.ws ] && sudo --version 2>/dev/null | grep -q '^sudo-rs'; then",
             "  mkdir -p ${local.openstack_tmp_dir}/sudo-ws",
             "  ln -sf /usr/bin/sudo.ws ${local.openstack_tmp_dir}/sudo-ws/sudo",
             "  SUDO_WS_PATH=${local.openstack_tmp_dir}/sudo-ws:",
