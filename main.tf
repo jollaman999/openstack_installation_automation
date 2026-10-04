@@ -1284,7 +1284,7 @@ resource "null_resource" "deploy_openstack_run_prechecks" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Running precheks...\"",
-            "kolla-ansible prechecks",
+            "kolla-ansible prechecks --use-test-images",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Kolla Ansible prechecks failed.\"",
