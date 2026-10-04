@@ -16,6 +16,9 @@ locals {
     # OpenStack release (must match the bundled kolla-ansible branch)
     openstack_release = "2026.1"
 
+    # GID that Kolla's udev rule assigns to /dev/kvm (qemu_user_gid)
+    kolla_qemu_gid = "42427"
+
     # OpenStack Temp Directory
     openstack_tmp_dir = "/root/openstack_tmp"
 
@@ -1215,10 +1218,39 @@ resource "null_resource" "nfs_configuration_configure_compute_node" {
     }
 }
 
+########### KVM Device Group ###########
+resource "null_resource" "install_kvm_device_group" {
+    depends_on = [
+        null_resource.nfs_configuration_configure_compute_node
+    ]
+
+    for_each = local.compute_role_ips
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = each.key
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Creating group ${local.kolla_qemu_gid} for /dev/kvm...\"",
+            "getent group ${local.kolla_qemu_gid} > /dev/null || groupadd -g ${local.kolla_qemu_gid} kolla-qemu",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to create group ${local.kolla_qemu_gid}.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
 ############# Deploy Openstack ###########
 resource "null_resource" "deploy_openstack_bootstrap_servers" {
     depends_on = [
-        null_resource.nfs_configuration_configure_compute_node
+        null_resource.install_kvm_device_group
     ]
 
     connection {
@@ -1504,10 +1536,40 @@ resource "null_resource" "fix_issues_ovn_run_directory_on_boot_issue" {
     }
 }
 
+###### Fix KVM Device Group Issue ######
+resource "null_resource" "fix_issues_kvm_device_group_issue" {
+    depends_on = [
+        null_resource.fix_issues_ovn_run_directory_on_boot_issue
+    ]
+
+    for_each = local.compute_role_ips
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = each.key
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Applying Kolla udev rule for /dev/kvm...\"",
+            "systemctl restart systemd-udevd",
+            "udevadm trigger --action=add --sysname-match=kvm --settle",
+            "KVM_GID=`stat -c %g /dev/kvm`",
+            "if [ \"$KVM_GID\" != \"${local.kolla_qemu_gid}\" ]; then",
+            "  echo \"[!] /dev/kvm group is $KVM_GID, expected ${local.kolla_qemu_gid}.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
 ###### Fix Instance Create Timeout Issue ######
 resource "null_resource" "fix_issues_instance_create_timeout_issue" {
     depends_on = [
-        null_resource.fix_issues_ovn_run_directory_on_boot_issue
+        null_resource.fix_issues_kvm_device_group_issue
     ]
 
     for_each = local.compute_role_ips
