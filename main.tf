@@ -1588,7 +1588,12 @@ resource "null_resource" "fix_issues_instance_create_timeout_issue" {
             "sed -i '/block_device_allocate_retries_interval/d' /etc/kolla/nova-compute/nova.conf",
             "sed -i '/resume_guests_state_on_host_boot/d' /etc/kolla/nova-compute/nova.conf",
             "sed -i 's/\\[DEFAULT\\]/& \\nblock_device_allocate_retries = 1800\\nblock_device_allocate_retries_interval = 6\\nresume_guests_state_on_host_boot = true/' /etc/kolla/nova-compute/nova.conf",
-            "systemctl restart kolla-nova_compute-container.service"
+            "systemctl restart kolla-nova_libvirt-container.service kolla-nova_ssh-container.service kolla-nova_compute-container.service",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to restart Nova services.\"",
+            "  exit 1",
+            "fi"
         ]
     }
 }
