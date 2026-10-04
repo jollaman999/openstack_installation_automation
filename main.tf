@@ -1660,7 +1660,7 @@ resource "null_resource" "post_install_openstack_client_openstackclient" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Installing openstackclient...\"",
-            "pip3 install --break-system-packages python-openstackclient",
+            "pip3 install --break-system-packages --ignore-installed python-openstackclient",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install openstackclient.\"",
@@ -1686,7 +1686,7 @@ resource "null_resource" "post_install_openstack_client_neutronclient" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Installing neutronclient...\"",
-            "pip3 install --break-system-packages python-neutronclient",
+            "pip3 install --break-system-packages --ignore-installed python-neutronclient",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install neutronclient.\"",
@@ -1712,7 +1712,7 @@ resource "null_resource" "post_install_openstack_client_glanceclient" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Installing glanceclient...\"",
-            "pip3 install --break-system-packages python-glanceclient",
+            "pip3 install --break-system-packages --ignore-installed python-glanceclient",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install glanceclient.\"",
@@ -2163,7 +2163,7 @@ resource "null_resource" "post_install_setup_loadbalancer_interface" {
             "#!/bin/bash",
             "echo \"[*] Setting Octavia loadbalancer interface...\"",
             ". /etc/kolla/admin-openrc.sh",
-            "pip3 install --break-system-packages python-openstackclient python-glanceclient python-neutronclient python-octaviaclient",
+            "pip3 install --break-system-packages --ignore-installed python-openstackclient python-glanceclient python-neutronclient python-octaviaclient",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install OpenStack client packages.\"",
@@ -2341,7 +2341,7 @@ resource "null_resource" "post_install_manila_install_client" {
         inline = [
             "#!/bin/bash",
             "echo \"[*] Installing Manila client...\"",
-            "pip3 install --break-system-packages python-manilaclient",
+            "pip3 install --break-system-packages --ignore-installed python-manilaclient",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to install Manila client.\"",
