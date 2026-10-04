@@ -8,14 +8,20 @@ controller_node_internal_interface = "ens36"
 controller_node_external_ip_address = "192.168.10.201"
 controller_node_external_ip_address_prefix_length = "24"
 controller_node_external_interface = "ens33"
-// compute
-compute_node_hostname = "openstack2"
-compute_node_internal_ip_address = "172.31.10.202"
-compute_node_internal_ip_address_prefix_length = "24"
-compute_node_internal_interface = "ens36"
-compute_node_external_ip_address = "192.168.10.202"
-compute_node_external_ip_address_prefix_length = "24"
-compute_node_external_interface = "ens33"
+// all-in-one (Controller 노드 1대에 모두 설치, compute_nodes 는 주석 처리 상태로 둘 것)
+all_in_one = true
+// compute (all_in_one = false 일 때만 설정, 노드를 추가하려면 블록을 이어서 작성)
+# compute_nodes = [
+#   {
+#     hostname = "openstack2"
+#     internal_ip_address = "172.31.10.202"
+#     internal_ip_address_prefix_length = "24"
+#     internal_interface = "ens36"
+#     external_ip_address = "192.168.10.202"
+#     external_ip_address_prefix_length = "24"
+#     external_interface = "ens33"
+#   },
+# ]
 
 /* OpenStack Settings */
 # openstack_keystone_admin_password = "openstack"

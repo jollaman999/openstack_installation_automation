@@ -27,28 +27,33 @@ variable "controller_node_external_ip_address_prefix_length" {
 variable "controller_node_external_interface" {
   description = "Controller 노드 외부 인터페이스명"
 }
+// all-in-one
+variable "all_in_one" {
+  description = "Controller 노드 1대에 Compute 역할까지 모두 설치 (true 이면 compute_nodes 를 비워둬야 함)"
+  type = bool
+  default = true
+}
 // compute
-variable "compute_node_hostname" {
-  description = "Compute 노드 호스트명"
-  default = "compute-node"
-}
-variable "compute_node_internal_ip_address" {
-  description = "Compute 노드 내부 인터페이스 IP 주소"
-}
-variable "compute_node_internal_ip_address_prefix_length" {
-  description = "Compute 노드 내부 인터페이스 IP 주소 서브넷 마스크 Prefix"
-}
-variable "compute_node_internal_interface" {
-  description = "Compute 노드 내부 인터페이스명"
-}
-variable "compute_node_external_ip_address" {
-  description = "Compute 노드 외부 인터페이스 IP 주소"
-}
-variable "compute_node_external_ip_address_prefix_length" {
-  description = "Compute 노드 외부 인터페이스 IP 주소 서브넷 마스크 Prefix"
-}
-variable "compute_node_external_interface" {
-  description = "Compute 노드 외부 인터페이스명"
+variable "compute_nodes" {
+  description = "Compute 노드 목록 (all_in_one = false 일 때만 설정)"
+  type = list(object({
+    hostname = string
+    internal_ip_address = string
+    internal_ip_address_prefix_length = string
+    internal_interface = string
+    external_ip_address = string
+    external_ip_address_prefix_length = string
+    external_interface = string
+  }))
+  default = []
+  validation {
+    condition = length(distinct([for n in var.compute_nodes : n.hostname])) == length(var.compute_nodes)
+    error_message = "compute_nodes has duplicated hostname."
+  }
+  validation {
+    condition = length(distinct([for n in var.compute_nodes : n.internal_ip_address])) == length(var.compute_nodes)
+    error_message = "compute_nodes has duplicated internal_ip_address."
+  }
 }
 
 /* OpenStack Settings */

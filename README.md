@@ -2,7 +2,13 @@
 
 ## 1. 요구 사항
 
-- 필요 노드 3대 (Controller 노드, Compute 노드, Storage 노드)
+- 설치 방식은 `all_in_one` 변수로 정합니다. (기본값: true)
+
+    | 설치 방식 | `all_in_one` | 필요 노드 |
+    |-----------|--------------|-----------|
+    | All-in-one | true | Controller 노드 1대 + Storage 노드 1대. Controller 노드가 Compute 역할까지 맡습니다. |
+    | Controller / Compute 분리 | false | Controller 노드 1대 + Compute 노드 1대 이상 + Storage 노드 1대 |
+
 - Controller 노드 요구 사항
     - CPU: 4Core 이상
     - RAM: 16GB 이상
@@ -14,7 +20,8 @@
     - Kernel: IPv6 Enabled
     - Python 3.12.x
     - SSH Server Installed
-- Compute 노드 요구 사항
+    - All-in-one 설치시에는 아래 Compute 노드 요구 사항(CPU, RAM, 가상화 활성화, KVM Enabled)을 Controller 노드가 추가로 만족해야 합니다.
+- Compute 노드 요구 사항 (Controller / Compute 분리 설치시)
     - CPU: (사용할 인스턴스 개수 * 인스턴스 당 권장 Core 수) 이상, 가상화 활성화
     - RAM: (사용할 인스턴스 개수 * 인스턴스 당 권장 RAM) 이상
     - Disk:  25GB 이상
@@ -52,11 +59,11 @@
     - NIC
         - External
             - 외부 인터넷과 통신 가능하도록 IP, Gateway, 네임서버를 설정합니다.
-            - Compute 노드와 같은 네트워크에 속하도록 구성합니다.
+            - Compute 노드와 같은 네트워크에 속하도록 구성합니다. (분리 설치시)
         - Internal
             - Compute 노드, Storage 노드와 통신 가능하도록 IP를 설정합니다.
-    - SSH 서버 설치 및 root 계정 패스워드 로그인 활성화 (Compute 노드와 동일한 패스워드 설정)
-- Compute  노드
+    - SSH 서버 설치 및 root 계정 패스워드 로그인 활성화 (분리 설치시 Compute 노드와 동일한 패스워드 설정)
+- Compute 노드 (Controller / Compute 분리 설치시, 모든 Compute 노드에 동일하게 설정)
     - NIC
         - External
             - 외부 인터넷과 통신 가능하도록 IP, Gateway, 네임서버를 설정합니다.
@@ -105,6 +112,8 @@
 
 terraform.tfvars 파일을 열어 설치에 필요한 변수들을 설정합니다.
 
+아래 예시는 All-in-one 설치 기준입니다. Controller / Compute 분리 설치는 예시 아래의 "설치 방식 관련 설정"을 참고합니다.
+
 ```bash
 /* Node Settings */
 openstack_nodes_ssh_root_password = "****"
@@ -116,14 +125,20 @@ controller_node_internal_interface = "eno1"
 controller_node_external_ip_address = "192.168.110.191"
 controller_node_external_ip_address_prefix_length = "24"
 controller_node_external_interface = "eno2"
-// compute
-compute_node_hostname = "cp-01"
-compute_node_internal_ip_address = "172.19.0.112"
-compute_node_internal_ip_address_prefix_length = "24"
-compute_node_internal_interface = "eno1"
-compute_node_external_ip_address = "192.168.110.192"
-compute_node_external_ip_address_prefix_length = "24"
-compute_node_external_interface = "eno2"
+// all-in-one (Controller 노드 1대에 모두 설치, compute_nodes 는 주석 처리 상태로 둘 것)
+all_in_one = true
+// compute (all_in_one = false 일 때만 설정, 노드를 추가하려면 블록을 이어서 작성)
+# compute_nodes = [
+#   {
+#     hostname = "cp-01"
+#     internal_ip_address = "172.19.0.112"
+#     internal_ip_address_prefix_length = "24"
+#     internal_interface = "eno1"
+#     external_ip_address = "192.168.110.192"
+#     external_ip_address_prefix_length = "24"
+#     external_interface = "eno2"
+#   },
+# ]
 
 /* OpenStack Settings */
 # openstack_keystone_admin_password = "openstack"
@@ -199,48 +214,62 @@ openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/in
         
         예시 : “eno2”
         
-- Compute 노드 관련 설정
-    - compute_node_hostname
+- 설치 방식 관련 설정
+    - all_in_one
         
-        Compute 노드의 호스트 명을 설정합니다.
+        Controller 노드 1대에 Compute 역할까지 모두 설치할지 설정합니다.
         
-        예시 : "cp-01"
+        - true : All-in-one 설치. compute_nodes 는 주석 처리하거나 비워둡니다.
+        - false : Controller / Compute 분리 설치. compute_nodes 에 Compute 노드를 1대 이상 설정합니다.
+        - 기본값 : true
         
-    - compute_node_internal_ip_address
+        설치 방식과 compute_nodes 설정이 맞지 않으면 노드에 접속하기 전, plan 단계에서 에러를 내고 중단합니다.
         
-        Compute 노드의 내부 인터페이스에 사용할 IP 주소를 설정합니다.
+        - all_in_one = true 인데 compute_nodes 가 설정되어 있는 경우
+        - all_in_one = false 인데 compute_nodes 가 비어 있는 경우
+        - Compute 노드끼리 또는 Controller 노드와 hostname, internal_ip_address 가 겹치는 경우
         
-        예시 : "172.19.0.112"
+    - compute_nodes
         
-    - compute_node_internal_ip_address_prefix_length
+        Compute 노드 목록을 설정합니다. all_in_one = false 일 때만 설정합니다.
         
-        Compute 노드의 내부 인터페이스에 사용할 IP 주소의 Prefix 길이를 설정합니다.
+        Compute 노드를 여러 대 구성하려면 `{ ... },` 블록을 이어서 작성합니다. 각 블록의 항목은 다음과 같습니다.
         
-        예시 : "24"
+        | 항목 | 설명 | 예시 |
+        |------|------|------|
+        | hostname | Compute 노드의 호스트 명 | "cp-01" |
+        | internal_ip_address | 내부 인터페이스에 사용할 IP 주소 | "172.19.0.112" |
+        | internal_ip_address_prefix_length | 내부 인터페이스 IP 주소의 Prefix 길이 | "24" |
+        | internal_interface | 내부 인터페이스명 | "eno1" |
+        | external_ip_address | 외부 인터페이스에 사용할 IP 주소 | "192.168.110.192" |
+        | external_ip_address_prefix_length | 외부 인터페이스 IP 주소의 Prefix 길이 | "24" |
+        | external_interface | 외부 인터페이스명 | "eno2" |
         
-    - compute_node_internal_interface
+        Controller / Compute 분리 설치 예시 (Compute 노드 2대)
         
-        Compute 노드의 내부 인터페이스명을 설정합니다.
-        
-        예시 : "eno1"
-        
-    - compute_node_external_ip_address
-        
-        Compute 노드의 외부 인터페이스에 사용할  IP 주소를 설정합니다.
-        
-        예시 : "192.168.110.192"
-        
-    - compute_node_external_ip_address_prefix_length
-        
-        Compute 노드의 외부 인터페이스에 사용할 IP 주소의 Prefix 길이를 설정합니다.
-        
-        예시 : "24"
-        
-    - compute_node_external_interface
-        
-        Compute 노드의 외부 인터페이스명을 설정합니다.
-        
-        예시 : "eno2"
+        ```bash
+        all_in_one = false
+        compute_nodes = [
+          {
+            hostname = "cp-01"
+            internal_ip_address = "172.19.0.112"
+            internal_ip_address_prefix_length = "24"
+            internal_interface = "eno1"
+            external_ip_address = "192.168.110.192"
+            external_ip_address_prefix_length = "24"
+            external_interface = "eno2"
+          },
+          {
+            hostname = "cp-02"
+            internal_ip_address = "172.19.0.113"
+            internal_ip_address_prefix_length = "24"
+            internal_interface = "eno1"
+            external_ip_address = "192.168.110.193"
+            external_ip_address_prefix_length = "24"
+            external_interface = "eno2"
+          },
+        ]
+        ```
         
 - OpenStack
     - openstack_keystone_admin_password
