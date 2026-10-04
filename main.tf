@@ -2020,7 +2020,7 @@ resource "null_resource" "post_install_setup_loadbalancer_interface" {
             "    octavia-hm0:",
             "      match:",
             "        name: octavia-hm0",
-            "      set-name: octavia-hm0",
+            "      macaddress: $${MGMT_PORT_MAC}",
             "      dhcp4: no",
             "      addresses:",
             "        - $${HMIP}/24",
