@@ -1467,10 +1467,40 @@ resource "null_resource" "fix_issues_nfs_mount_on_boot_issue" {
     }
 }
 
+###### Fix OVN Run Directory on Boot Issue ######
+resource "null_resource" "fix_issues_ovn_run_directory_on_boot_issue" {
+    depends_on = [
+        null_resource.fix_issues_nfs_mount_on_boot_issue
+    ]
+
+    for_each = local.hosts_ips
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = each.key
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Registering /run/ovn to be created on boot...\"",
+            "echo 'd /run/ovn 0770 root root -' > /etc/tmpfiles.d/kolla-ovn.conf",
+            "systemd-tmpfiles --create /etc/tmpfiles.d/kolla-ovn.conf",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to register /run/ovn directory.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
 ###### Fix Instance Create Timeout Issue ######
 resource "null_resource" "fix_issues_instance_create_timeout_issue" {
     depends_on = [
-        null_resource.fix_issues_nfs_mount_on_boot_issue
+        null_resource.fix_issues_ovn_run_directory_on_boot_issue
     ]
 
     for_each = local.compute_role_ips
