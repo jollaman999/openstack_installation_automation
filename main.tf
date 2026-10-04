@@ -2225,6 +2225,19 @@ resource "null_resource" "post_install_setup_loadbalancer_interface" {
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to apply netplan configuration.\"",
             "  exit 1",
+            "fi",
+            "echo \"[*] Pointing Octavia health manager to octavia-hm0 ($${HMIP})...\"",
+            "for f in /etc/kolla/octavia-*/octavia.conf; do sed -i \"s/^bind_ip = .*/bind_ip = $${HMIP}/; s/^controller_ip_port_list = .*/controller_ip_port_list = $${HMIP}:5555/\" $f || exit 1; done",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to configure Octavia health manager address.\"",
+            "  exit 1",
+            "fi",
+            "for u in `systemctl list-units --all --plain --no-legend 'kolla-octavia_*-container.service' | awk '{print $1}'`; do systemctl restart $u || exit 1; done",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to restart Octavia services.\"",
+            "  exit 1",
             "fi"
         ]
     }
