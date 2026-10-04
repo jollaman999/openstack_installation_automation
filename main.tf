@@ -1366,7 +1366,14 @@ resource "null_resource" "deploy_openstack_configure_external_interface_controll
             "sed -i 's/'\"${var.openstack_vip_external}\"' dev '\"${var.controller_node_external_interface}\"'/'\"${var.openstack_vip_external}\"' dev br-ex/g' /etc/kolla/keepalived/keepalived.conf",
             "echo \"    ${var.controller_node_external_interface}: {}\" >> /etc/netplan/999-netplan_openstack.yaml",
             "netplan apply",
-            "ip address del ${var.controller_node_external_ip_address}/${var.controller_node_external_ip_address_prefix_length} dev ${var.controller_node_external_interface} > /dev/null 2>&1 | true"
+            "ip address del ${var.controller_node_external_ip_address}/${var.controller_node_external_ip_address_prefix_length} dev ${var.controller_node_external_interface} > /dev/null 2>&1 | true",
+            "echo \"[*] Restarting keepalived to move the external VIP to br-ex...\"",
+            "podman restart keepalived",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to restart keepalived.\"",
+            "  exit 1",
+            "fi"
         ]
     }
 }
