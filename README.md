@@ -18,7 +18,7 @@
         - Internal: 내부 통신용 1개
     - OS: Ubuntu 24.04 LTS 또는 26.04 LTS
     - Kernel: IPv6 Enabled
-    - Python 3.12.x
+    - Python 3.12.x (Ubuntu 24.04) 또는 3.14.x (Ubuntu 26.04)
     - SSH Server Installed
     - All-in-one 설치시에는 아래 Compute 노드 요구 사항(CPU, RAM, 가상화 활성화, KVM Enabled)을 Controller 노드가 추가로 만족해야 합니다.
 - Compute 노드 요구 사항 (Controller / Compute 분리 설치시)
@@ -30,7 +30,7 @@
         - Internal: 내부 통신용 1개
     - OS: Ubuntu 24.04 LTS 또는 26.04 LTS
     - Kernel: IPv6 Enable, KVM Enabled
-    - Python 3.12.x
+    - Python 3.12.x (Ubuntu 24.04) 또는 3.14.x (Ubuntu 26.04)
     - SSH Server Installed
 - Storage 노드 요구 사항
     - NFS 서버 활성화
