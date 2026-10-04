@@ -2351,9 +2351,37 @@ resource "null_resource" "post_install_manila_install_client" {
     }
 }
 
-resource "null_resource" "post_install_manila_create_share_type" {
+resource "null_resource" "post_install_manila_connect_share_server_to_tenant_network" {
     depends_on = [
         null_resource.post_install_manila_install_client
+    ]
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Connecting Manila share servers to tenant networks...\"",
+            "sed -i '/^connect_share_server_to_tenant_network/d' /etc/kolla/manila-share/manila.conf",
+            "sed -i 's/^\\[generic\\]/&\\nconnect_share_server_to_tenant_network = True/' /etc/kolla/manila-share/manila.conf",
+            "systemctl restart kolla-manila_share-container.service",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to restart manila_share.\"",
+            "  exit 1",
+            "fi"
+        ]
+    }
+}
+
+resource "null_resource" "post_install_manila_create_share_type" {
+    depends_on = [
+        null_resource.post_install_manila_connect_share_server_to_tenant_network
     ]
 
     connection {
