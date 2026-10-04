@@ -64,10 +64,10 @@ resource "null_resource" "pre_check_os" {
         inline = [
             "#!/bin/bash",
             "CHECK_OS_ID=`lsb_release -i | grep -i \"ubuntu\" > /dev/null 2>&1 ; echo $?`",
-            "CHECK_OS_RELEASE=`lsb_release -r | grep -i \"24.04\" > /dev/null 2>&1 ; echo $?`",
+            "CHECK_OS_RELEASE=`lsb_release -r | grep -E \"24\\.04|26\\.04\" > /dev/null 2>&1 ; echo $?`",
             "echo \"[*] Checking OS version...\"",
             "if [ $CHECK_OS_ID != \"0\" ] || [ $CHECK_OS_RELEASE != \"0\" ]; then",
-            "  echo \"[!] This script only supports Ubuntu 24.04.\"",
+            "  echo \"[!] This script only supports Ubuntu 24.04 or 26.04.\"",
             "  exit 1",
             "fi"
         ]
@@ -1067,6 +1067,10 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_global_v
             "echo 'neutron_plugin_agent: \"ovn\"' >> /etc/kolla/globals.d/globals.yml",
             "sed -i '/openstack_cacert/d' /etc/kolla/globals.d/globals.yml",
             "echo 'openstack_cacert: \"/etc/ssl/certs/ca-certificates.crt\"' >> /etc/kolla/globals.d/globals.yml",
+            "sed -i '/prechecks_enable_host_os_checks/d' /etc/kolla/globals.d/globals.yml",
+            "echo 'prechecks_enable_host_os_checks: \"no\"' >> /etc/kolla/globals.d/globals.yml",
+            "sed -i '/kolla_sysctl_conf_path/d' /etc/kolla/globals.d/globals.yml",
+            "echo 'kolla_sysctl_conf_path: \"/etc/sysctl.d/99-kolla.conf\"' >> /etc/kolla/globals.d/globals.yml",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to configure Kolla Ansible global variables...\"",
@@ -1612,35 +1616,9 @@ resource "null_resource" "post_install_openstack_client_glanceclient" {
     }
 }
 
-resource "null_resource" "post_install_openstack_client_cryptography" {
-    depends_on = [
-        null_resource.post_install_openstack_client_glanceclient
-    ]
-
-    connection {
-        type     = "ssh"
-        user     = "root"
-        password = var.openstack_nodes_ssh_root_password
-        host     = var.controller_node_internal_ip_address
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "#!/bin/bash",
-            "echo \"[*] Installing cryptography...\"",
-            "pip3 install --break-system-packages cryptography==2.7.0",
-            "STATUS=`echo $?`",
-            "if [ $STATUS != 0 ]; then",
-            "  echo \"[!] Failed to install cryptography.\"",
-            "  exit 1",
-            "fi"
-        ]
-    }
-}
-
 resource "null_resource" "post_install_openstack_client_post_deploy" {
     depends_on = [
-        null_resource.post_install_openstack_client_cryptography
+        null_resource.post_install_openstack_client_glanceclient
     ]
 
     connection {

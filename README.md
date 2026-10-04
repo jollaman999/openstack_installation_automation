@@ -16,7 +16,7 @@
     - NIC 2개
         - External: 외부 통신용 1개
         - Internal: 내부 통신용 1개
-    - OS: Ubuntu 24.04 LTS
+    - OS: Ubuntu 24.04 LTS 또는 26.04 LTS
     - Kernel: IPv6 Enabled
     - Python 3.12.x
     - SSH Server Installed
@@ -28,7 +28,7 @@
     - NIC 2개
         - External: 외부 통신용 1개
         - Internal: 내부 통신용 1개
-    - OS: Ubuntu 24.04 LTS
+    - OS: Ubuntu 24.04 LTS 또는 26.04 LTS
     - Kernel: IPv6 Enable, KVM Enabled
     - Python 3.12.x
     - SSH Server Installed
