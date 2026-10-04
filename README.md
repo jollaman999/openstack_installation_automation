@@ -6,8 +6,8 @@
 
     | 설치 방식 | `all_in_one` | 필요 노드 |
     |-----------|--------------|-----------|
-    | All-in-one | true | Controller 노드 1대 + Storage 노드 1대. Controller 노드가 Compute 역할까지 맡습니다. |
-    | Controller / Compute 분리 | false | Controller 노드 1대 + Compute 노드 1대 이상 + Storage 노드 1대 |
+    | All-in-one | true | Controller 노드 1대 + Storage 노드 1대. Controller 노드가 Compute 역할까지 맡습니다. Storage 노드(NFS)는 Controller 노드에 함께 둘 수 있습니다. |
+    | Controller / Compute 분리 | false | Controller 노드 1대 + Compute 노드 1대 이상 + Storage 노드 1대. Storage 노드(NFS)는 Controller 노드에 함께 둘 수 있습니다. |
 
 - Controller 노드 요구 사항
     - CPU: 4Core 이상
@@ -37,6 +37,11 @@
     - Disk: (사용할 인스턴스 개수 * 인스턴스 별 OS 디스크 용량) 이상
     - NIC 1개
         - Internal: 내부 통신용 1개
+- Storage 노드 배치
+    - Storage 노드를 따로 두지 않고 Controller 노드에 NFS 서버를 함께 설치해도 됩니다. 이때 NFS 타겟 주소는 Controller 노드의 내부 IP를 사용합니다. (예: `172.19.0.111:/Storage/openstack/cinder`)
+    - 같은 장비 안의 NFS 접근은 물리 NIC를 거치지 않고 커널 내부(loopback)로 처리되지만, NFS 처리 과정은 그대로 거치므로 로컬 디스크를 직접 쓰는 것보다 느립니다.
+    - NFS 서버는 그 NFS를 쓰는 모든 노드의 단일 장애점입니다. NFS 서버가 멈추면 볼륨, 이미지, 인스턴스 디스크를 쓰는 모든 서비스가 함께 멈춥니다.
+    - OpenStack 환경(팜)을 여러 개 운영한다면 팜마다 자기 Controller 노드(또는 자기 Storage 노드)에 NFS를 두는 것을 권장합니다. 한 팜의 Controller 노드에 다른 팜의 NFS까지 두면, 그 Controller 노드의 점검, 재부팅, 장애가 다른 팜까지 멈추게 합니다.
 
 ## 2. 설치 후 사용 가능한 서비스
 
