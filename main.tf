@@ -1400,7 +1400,7 @@ resource "null_resource" "deploy_openstack_configure_external_interface_controll
             "netplan apply",
             "ip address del ${var.controller_node_external_ip_address}/${var.controller_node_external_ip_address_prefix_length} dev ${var.controller_node_external_interface} > /dev/null 2>&1 | true",
             "echo \"[*] Restarting keepalived to move the external VIP to br-ex...\"",
-            "podman restart keepalived",
+            "systemctl restart kolla-keepalived-container.service",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to restart keepalived.\"",
@@ -1587,7 +1587,7 @@ resource "null_resource" "fix_issues_instance_create_timeout_issue" {
             "sed -i '/block_device_allocate_retries/d' /etc/kolla/nova-compute/nova.conf",
             "sed -i '/block_device_allocate_retries_interval/d' /etc/kolla/nova-compute/nova.conf",
             "sed -i 's/\\[DEFAULT\\]/& \\nblock_device_allocate_retries = 1800\\nblock_device_allocate_retries_interval = 6/' /etc/kolla/nova-compute/nova.conf",
-            "podman restart nova_compute"
+            "systemctl restart kolla-nova_compute-container.service"
         ]
     }
 }
@@ -1611,7 +1611,7 @@ resource "null_resource" "fix_issues_octavia_timeout_issue" {
             "sed -i '/compute_active_retries/d' /etc/kolla/octavia-worker/octavia.conf",
             "sed -i '/compute_active_wait_sec/d' /etc/kolla/octavia-worker/octavia.conf",
             "sed -i 's/\\[controller_worker\\]/& \\ncompute_active_retries = 900\\ncompute_active_wait_sec = 6/' /etc/kolla/octavia-worker/octavia.conf",
-            "podman restart octavia_worker"
+            "systemctl restart kolla-octavia_worker-container.service"
         ]
     }
 }
@@ -1633,7 +1633,7 @@ resource "null_resource" "fix_issues_glance_cors" {
             "#!/bin/bash",
             "sed -i '/allowed_origin/d' /etc/kolla/glance-api/glance-api.conf",
             "sed -i 's/\\[cors\\]/& \\nallowed_origin = \\*/' /etc/kolla/glance-api/glance-api.conf",
-            "podman restart glance_api"
+            "systemctl restart kolla-glance_api-container.service"
         ]
     }
 }
