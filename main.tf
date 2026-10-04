@@ -2320,7 +2320,7 @@ resource "null_resource" "post_install_manila_create_service_flavor" {
             "#!/bin/bash",
             "echo \"[*] Creating Manila service flavor...\"",
             ". /etc/kolla/admin-openrc.sh",
-            "openstack flavor create manila-service-flavor --id 100 --ram 4096 --disk 4 --vcpus 4",
+            "openstack flavor create manila-service-flavor --id 100 --ram 4096 --disk 10 --vcpus 4",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to create Manila service flavor.\"",
