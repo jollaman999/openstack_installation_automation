@@ -15,6 +15,7 @@ import glob
 import ipaddress
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -269,10 +270,11 @@ def cutover(args):
     run(["ip", "link", "set", OVS_BRIDGE, "up"])
     run(["netplan", "apply"])
     if args.vip and os.path.exists(KEEPALIVED_CONF):
+        # brext0 is both the external VIP device and a track_interface entry
         with open(KEEPALIVED_CONF) as f:
             conf = f.read()
         with open(KEEPALIVED_CONF, "w") as f:
-            f.write(conf.replace("%s dev %s" % (args.vip, BRIDGE), "%s dev %s" % (args.vip, OVS_BRIDGE)))
+            f.write(re.sub(r"\b%s\b" % BRIDGE, OVS_BRIDGE, conf))
         run(["systemctl", "restart", "kolla-keepalived-container.service"])
     if not check_connectivity(OVS_BRIDGE, state, args.vip):
         disarm_timer()
