@@ -121,13 +121,29 @@ variable "openstack_cirros_test_image_version" {
 }
 
 # OpenStack NFS configuration
+variable "nfs_server_auto_install" {
+  description = "Controller 노드에 NFS 서버를 설치하고 OpenStack NFS 타켓을 자동으로 설정할지 여부"
+  default = true
+  type = bool
+}
+variable "nfs_server_export_path" {
+  description = "NFS 서버 자동 설치시 cinder, images, instances 폴더를 만들 경로"
+  default = "/Storage/openstack"
+  type = string
+}
 variable "openstack_cinder_volumes_nfs_target" {
-  description = "OpenStack Cinder 볼륨 NFS 타켓"
+  description = "OpenStack Cinder 볼륨 NFS 타켓 (nfs_server_auto_install = false 일 때)"
+  default = ""
+  type = string
 }
 variable "openstack_glance_images_nfs_target" {
-  description = "OpenStack Glance 이미지 NFS 타켓"
+  description = "OpenStack Glance 이미지 NFS 타켓 (nfs_server_auto_install = false 일 때)"
+  default = ""
+  type = string
 }
 variable "openstack_nova_compute_instances_nfs_target" {
-  description = "OpenStack Nova Compute 인스턴스 NFS 타켓"
+  description = "OpenStack Nova Compute 인스턴스 NFS 타켓 (nfs_server_auto_install = false 일 때)"
+  default = ""
+  type = string
 }
 

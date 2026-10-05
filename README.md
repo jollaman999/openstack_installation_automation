@@ -6,8 +6,8 @@
 
     | 설치 방식 | `all_in_one` | 필요 노드 |
     |-----------|--------------|-----------|
-    | All-in-one | true | Controller 노드 1대 + Storage 노드 1대. Controller 노드가 Compute 역할까지 맡습니다. Storage 노드(NFS)는 Controller 노드에 함께 둘 수 있습니다. |
-    | Controller / Compute 분리 | false | Controller 노드 1대 + Compute 노드 1대 이상 + Storage 노드 1대. Storage 노드(NFS)는 Controller 노드에 함께 둘 수 있습니다. |
+    | All-in-one | true | Controller 노드 1대. Controller 노드가 Compute 역할까지 맡습니다. NFS 는 기본으로 Controller 노드에 자동 설치됩니다. (`nfs_server_auto_install`) |
+    | Controller / Compute 분리 | false | Controller 노드 1대 + Compute 노드 1대 이상. NFS 는 기본으로 Controller 노드에 자동 설치됩니다. (`nfs_server_auto_install`) |
 
 - Controller 노드 요구 사항
     - CPU: 4Core 이상
@@ -32,13 +32,16 @@
     - Kernel: IPv6 Enable, KVM Enabled
     - Python 3.12.x (Ubuntu 24.04) 또는 3.14.x (Ubuntu 26.04)
     - SSH Server Installed
-- Storage 노드 요구 사항
+- Storage 노드 요구 사항 (`nfs_server_auto_install = false` 로 기존 NFS 서버를 쓸 때만)
     - NFS 서버 활성화
     - Disk: (사용할 인스턴스 개수 * 인스턴스 별 OS 디스크 용량) 이상
     - NIC 1개
         - Internal: 내부 통신용 1개
-- Storage 노드 배치
-    - Storage 노드를 따로 두지 않고 Controller 노드에 NFS 서버를 함께 설치해도 됩니다. 이때 NFS 타겟 주소는 Controller 노드의 내부 IP를 사용합니다. (예: `172.19.0.111:/Storage/openstack/cinder`)
+- NFS 배치
+    - 기본값(`nfs_server_auto_install = true`)에서는 설치 스크립트가 Controller 노드에 NFS 서버를 설치하고 `nfs_server_export_path`(기본 `/Storage/openstack`) 아래에 cinder, images, instances 폴더를 만들어 export 합니다.
+        - All-in-one 이면 NFS 타겟 주소로 `127.0.0.1` 을, 분리 설치면 Controller 노드의 내부 IP 를 사용합니다.
+        - 데이터를 둘 디스크를 `nfs_server_export_path` 에 미리 마운트해 두세요. 마운트하지 않으면 루트 디스크에 저장됩니다.
+    - 따로 둔 Storage 노드나 기존 NFS 서버를 쓰려면 `nfs_server_auto_install = false` 로 두고 `openstack_*_nfs_target` 3개를 설정합니다.
     - 같은 장비 안의 NFS 접근은 물리 NIC를 거치지 않고 커널 내부(loopback)로 처리되지만, NFS 처리 과정은 그대로 거치므로 로컬 디스크를 직접 쓰는 것보다 느립니다.
     - NFS 서버는 그 NFS를 쓰는 모든 노드의 단일 장애점입니다. NFS 서버가 멈추면 볼륨, 이미지, 인스턴스 디스크를 쓰는 모든 서비스가 함께 멈춥니다.
     - OpenStack 환경(팜)을 여러 개 운영한다면 팜마다 자기 Controller 노드(또는 자기 Storage 노드)에 NFS를 두는 것을 권장합니다. 한 팜의 Controller 노드에 다른 팜의 NFS까지 두면, 그 Controller 노드의 점검, 재부팅, 장애가 다른 팜까지 멈추게 합니다.
@@ -82,7 +85,7 @@
     - OpenStack 배포가 끝나면 External 인터페이스를 `br-ex` 에 넣고 IP 를 `br-ex` 로 옮긴 뒤 `brext0` 와 veth 를 지웁니다.
     - 각 단계는 Gateway 와 인터넷 연결을 확인하고, 실패하거나 120초 안에 확인이 끝나지 않으면 이전 네트워크 설정으로 자동 복원합니다.
     - 설치 전 netplan 설정은 `/var/lib/openstack-external-net/netplan.pre-openstack/` 에 백업됩니다.
-- Storage 노드
+- Storage 노드 (`nfs_server_auto_install = false` 일 때만)
     - NIC
         - Internal
             - Controller 노드, Compute 노드와 통신 가능하도록 IP를 설정합니다.
@@ -168,13 +171,18 @@ openstack_internal_subnet_range = "10.0.0.0/24"
 # openstack_cirros_test_image_version = "0.6.3"
 
 /* OpenStack NFS configuration */
+// true: install an NFS server on the controller node and point OpenStack at it
+//       (127.0.0.1 when all_in_one, the controller internal IP otherwise)
+nfs_server_auto_install = true
+# nfs_server_export_path = "/Storage/openstack"
+// Only when nfs_server_auto_install = false: an existing NFS server
 // NFS server /etc/exports NFS options: (rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
 // Need permission for cinder: 42407
-openstack_cinder_volumes_nfs_target = "172.29.0.10:/Storage/openstack/cinder"
+# openstack_cinder_volumes_nfs_target = "172.29.0.10:/Storage/openstack/cinder"
 // Need permission for glance: 42415
-openstack_glance_images_nfs_target = "172.29.0.10:/Storage/openstack/images"
+# openstack_glance_images_nfs_target = "172.29.0.10:/Storage/openstack/images"
 // Need permission for nova-compute: 42436
-openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/instances"
+# openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/instances"
 ```
             
 - 공통
@@ -327,7 +335,18 @@ openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/in
         - CirrOS 이미지 구성시 사용할 버전을 설정합니다.
         - 버전 참고 : [https://github.com/cirros-dev/cirros/tags](https://github.com/cirros-dev/cirros/tags)
         - 기본값 : "0.6.3"
-- OpenStack NFS 마운트 경로 설정
+- NFS 서버 자동 설치
+    - nfs_server_auto_install
+        - Controller 노드에 NFS 서버를 설치하고 OpenStack 의 NFS 타겟을 자동으로 설정합니다.
+        - NFS 타겟 주소는 All-in-one 이면 `127.0.0.1`, 분리 설치면 Controller 노드의 내부 IP 입니다.
+        - 켠 상태에서 아래 `openstack_*_nfs_target` 을 설정하면 설치 전 단계(plan)에서 막습니다.
+        - 기본값 : true
+    - nfs_server_export_path
+        - NFS 서버 자동 설치시 cinder, images, instances 폴더를 만들고 export 할 경로입니다.
+        - 기본값 : "/Storage/openstack"
+- OpenStack NFS 마운트 경로 설정 (`nfs_server_auto_install = false` 일 때만 사용)
+    
+    기존 NFS 서버를 쓸 때 설정합니다. 3개 모두 설정해야 하며, 하나라도 비어 있으면 설치 전 단계(plan)에서 막습니다.
     
     NFS Server에서 /etc/exports 파일에 각 폴더의 옵션을 다음과 같이 설정합니다.
     

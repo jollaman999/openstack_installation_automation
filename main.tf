@@ -22,6 +22,13 @@ locals {
     # OpenStack Temp Directory
     openstack_tmp_dir = "/root/openstack_tmp"
 
+    # NFS targets (served by the controller when nfs_server_auto_install)
+    nfs_server_address = var.all_in_one ? "127.0.0.1" : var.controller_node_internal_ip_address
+    nfs_cinder_target = var.nfs_server_auto_install ? "${local.nfs_server_address}:${var.nfs_server_export_path}/cinder" : var.openstack_cinder_volumes_nfs_target
+    nfs_glance_target = var.nfs_server_auto_install ? "${local.nfs_server_address}:${var.nfs_server_export_path}/images" : var.openstack_glance_images_nfs_target
+    nfs_nova_target = var.nfs_server_auto_install ? "${local.nfs_server_address}:${var.nfs_server_export_path}/instances" : var.openstack_nova_compute_instances_nfs_target
+    nfs_manual_targets = [var.openstack_cinder_volumes_nfs_target, var.openstack_glance_images_nfs_target, var.openstack_nova_compute_instances_nfs_target]
+
 }
 
 ##########################################
@@ -44,6 +51,14 @@ resource "null_resource" "pre_check_node_layout" {
         precondition {
             condition     = !contains([for node in var.compute_nodes : node.internal_ip_address], var.controller_node_internal_ip_address)
             error_message = "compute_nodes has the same internal_ip_address with controller_node_internal_ip_address."
+        }
+        precondition {
+            condition     = !var.nfs_server_auto_install || alltrue([for t in local.nfs_manual_targets : t == ""])
+            error_message = "nfs_server_auto_install is true but openstack_*_nfs_target is set. Comment out the openstack_*_nfs_target lines or set nfs_server_auto_install = false."
+        }
+        precondition {
+            condition     = var.nfs_server_auto_install || alltrue([for t in local.nfs_manual_targets : t != ""])
+            error_message = "nfs_server_auto_install is false but some openstack_*_nfs_target is empty. Set all three NFS targets or set nfs_server_auto_install = true."
         }
     }
 }
@@ -1058,9 +1073,53 @@ resource "null_resource" "nfs_configuration_install_nfs_apt_packages" {
     }
 }
 
-resource "null_resource" "nfs_configuration_configure_controller_node" {
+resource "null_resource" "nfs_configuration_install_nfs_server" {
     depends_on = [
         null_resource.nfs_configuration_install_nfs_apt_packages
+    ]
+
+    count = var.nfs_server_auto_install ? 1 : 0
+
+    connection {
+        type     = "ssh"
+        user     = "root"
+        password = var.openstack_nodes_ssh_root_password
+        host     = var.controller_node_internal_ip_address
+    }
+
+    provisioner "remote-exec" {
+        inline = [
+            "#!/bin/bash",
+            "echo \"[*] Installing NFS server on the controller node...\"",
+            "DEBIAN_FRONTEND=noninteractive apt install -y nfs-kernel-server",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to install nfs-kernel-server.\"",
+            "  exit 1",
+            "fi",
+            "mkdir -p ${var.nfs_server_export_path}/cinder ${var.nfs_server_export_path}/images ${var.nfs_server_export_path}/instances",
+            "chown 42407:42400 ${var.nfs_server_export_path}/cinder",
+            "chown 42415:42415 ${var.nfs_server_export_path}/images",
+            "chown 42436:42436 ${var.nfs_server_export_path}/instances",
+            "sed -i '\\#^${var.nfs_server_export_path}/\\(cinder\\|images\\|instances\\) #d' /etc/exports",
+            "for d in cinder images instances; do",
+            "  echo \"${var.nfs_server_export_path}/$d ${join(" ", [for ip in concat(["127.0.0.1"], tolist(local.hosts_ips)) : "${ip}(rw,nohide,sync,no_subtree_check,insecure,no_root_squash)"])}\" >> /etc/exports",
+            "done",
+            "systemctl enable --now nfs-server && exportfs -ra",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to start the NFS server.\"",
+            "  exit 1",
+            "fi",
+            "exportfs -v | grep -c '${var.nfs_server_export_path}/'"
+        ]
+    }
+}
+
+resource "null_resource" "nfs_configuration_configure_controller_node" {
+    depends_on = [
+        null_resource.nfs_configuration_install_nfs_apt_packages,
+        null_resource.nfs_configuration_install_nfs_server
     ]
 
     connection {
@@ -1075,7 +1134,7 @@ resource "null_resource" "nfs_configuration_configure_controller_node" {
             "#!/bin/bash",
             "echo \"[*] Creating cinder NFS configuration file...\"",
             "mkdir -p /etc/kolla/config/",
-            "echo \"${var.openstack_cinder_volumes_nfs_target}\" > /etc/kolla/config/nfs_shares",
+            "echo \"${local.nfs_cinder_target}\" > /etc/kolla/config/nfs_shares",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to create cinder NFS configuration file.\"",
@@ -1083,7 +1142,7 @@ resource "null_resource" "nfs_configuration_configure_controller_node" {
             "fi",
             "echo \"[*] Adding Glance Images NFS target to fstab...\"",
             "sed -i '/glance/d' /etc/fstab",
-            "echo \"${var.openstack_glance_images_nfs_target} /var/lib/containers/storage/volumes/glance/_data/images nfs defaults,_netdev 0 0\" >> /etc/fstab",
+            "echo \"${local.nfs_glance_target} /var/lib/containers/storage/volumes/glance/_data/images nfs defaults,_netdev 0 0\" >> /etc/fstab",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to modify controller node's fstab file.\"",
@@ -1112,7 +1171,7 @@ resource "null_resource" "nfs_configuration_configure_compute_node" {
             "#!/bin/bash",
             "echo \"[*] Adding Nova Compute NFS target to fstab...\"",
             "sed -i '/nova_compute/d' /etc/fstab",
-            "echo \"${var.openstack_nova_compute_instances_nfs_target} /var/lib/containers/storage/volumes/nova_compute/_data/instances nfs defaults,_netdev 0 0\" >> /etc/fstab",
+            "echo \"${local.nfs_nova_target} /var/lib/containers/storage/volumes/nova_compute/_data/instances nfs defaults,_netdev 0 0\" >> /etc/fstab",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
             "  echo \"[!] Failed to modify compute node's fstab file.\"",

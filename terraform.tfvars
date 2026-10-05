@@ -40,10 +40,15 @@ openstack_internal_subnet_range = "10.0.10.0/24"
 # openstack_cirros_test_image_version = "0.6.3"
 
 /* OpenStack NFS configuration */
+// true: install an NFS server on the controller node and point OpenStack at it
+//       (127.0.0.1 when all_in_one, the controller internal IP otherwise)
+nfs_server_auto_install = true
+# nfs_server_export_path = "/Storage/openstack"
+// Only when nfs_server_auto_install = false: an existing NFS server
 // NFS server /etc/exports NFS options: (rw,nohide,sync,no_subtree_check,insecure,no_root_squash)
 // Need permission for cinder UID, GID: 42407, 42400
-openstack_cinder_volumes_nfs_target = "172.31.10.201:/Storage/openstack/cinder"
+# openstack_cinder_volumes_nfs_target = "172.31.10.201:/Storage/openstack/cinder"
 // Need permission for glance: 42415, 42415
-openstack_glance_images_nfs_target = "172.31.10.201:/Storage/openstack/images"
+# openstack_glance_images_nfs_target = "172.31.10.201:/Storage/openstack/images"
 // Need permission for nova-compute: 42436, 42436
-openstack_nova_compute_instances_nfs_target = "172.31.10.201:/Storage/openstack/instances"
+# openstack_nova_compute_instances_nfs_target = "172.31.10.201:/Storage/openstack/instances"
