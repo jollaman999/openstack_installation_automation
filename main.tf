@@ -22,7 +22,6 @@ locals {
     # OpenStack Temp Directory
     openstack_tmp_dir = "/root/openstack_tmp"
 
-    network_reconfigure_wait_time_seconds = "10"
 }
 
 ##########################################
@@ -132,50 +131,9 @@ resource "null_resource" "pre_check_compute_kvm" {
     }
 }
 
-resource "null_resource" "pre_check_ssh_connection" {
-    depends_on = [
-        null_resource.pre_check_compute_kvm
-    ]
-
-    connection {
-        type     = "ssh"
-        user     = "root"
-        password = var.openstack_nodes_ssh_root_password
-        host     = var.controller_node_internal_ip_address
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "#!/bin/bash",
-            "check_ssh_connection_of_iface() {",
-            "  NODE_IPS_WITH_CIDR=`ip addr | grep $1 | awk '{ print $2 }' | grep -v $1`",
-            "  STATUS=`echo $?`",
-            "  if [ $STATUS != \"0\" ]; then",
-            "    return 0",
-            "  fi",
-            "  for IP_CIDR in $${NODE_IPS_WITH_CIDR[@]}; do",
-            "    IP=`echo $IP_CIDR | cut -d'/' -f1`",
-            "    SSH_CONNECTION_STATUS=`ss -tnpa -o state established src $IP | grep -i sshd > /dev/null ; echo $?`",
-            "    if [ \"$SSH_CONNECTION_STATUS\" = \"0\" ]; then",
-            "      echo \"[!] External SSH Connection Detected!!\"",
-            "      echo \" External SSH connection will be disconnected while installing OpenStack!\"",
-            "      echo \" Please exit external SSH connection and connect to SSH through internal interface.\"",
-            "      echo \" You can check with 'sudo ss -tnpa -o state established | grep -i sshd' command.\"",
-            "      exit 1",
-            "    fi",
-            "  done",
-            "  return 0",
-            "}",
-            "echo \"[*] Checking SSH connection...\"",
-            "check_ssh_connection_of_iface ${var.controller_node_external_interface}",
-            "check_ssh_connection_of_iface br-ex"
-        ]
-    }
-}
-
 resource "null_resource" "pre_check_create_temp_folder" {
     depends_on = [
-        null_resource.pre_check_ssh_connection
+        null_resource.pre_check_compute_kvm
     ]
 
     for_each = local.hosts_ips
@@ -357,47 +315,13 @@ resource "null_resource" "pre_check_iface_controller_node_external_vip" {
 ##########################################
 
 ########### reconfigure_network ##########
-data "template_file" "install_reconfigure_network_template_controller" {
-    depends_on = [
-        null_resource.pre_check_iface_controller_node_external_vip
-    ]
-
-    template = file("${path.root}/netplan/999-netplan_openstack.tpl")
-
-    vars = {
-        internal_interface = var.controller_node_internal_interface
-        internal_ip_address = var.controller_node_internal_ip_address
-        internal_ip_address_prefix_length = var.controller_node_internal_ip_address_prefix_length
-        external_interface = var.controller_node_external_interface
-        external_ip_address = var.controller_node_external_ip_address
-        external_ip_address_prefix_length = var.controller_node_external_ip_address_prefix_length
-        external_gateway_ip_address = var.openstack_external_subnet_pool_gateway
-    }
-}
-
-data "template_file" "install_reconfigure_network_template_compute" {
-    depends_on = [
-        null_resource.pre_check_iface_controller_node_external_vip
-    ]
-
-    for_each = local.compute_nodes
-
-    template = file("${path.root}/netplan/999-netplan_openstack.tpl")
-
-    vars = {
-        internal_interface = each.value.internal_interface
-        internal_ip_address = each.value.internal_ip_address
-        internal_ip_address_prefix_length = each.value.internal_ip_address_prefix_length
-        external_interface = each.value.external_interface
-        external_ip_address = each.value.external_ip_address
-        external_ip_address_prefix_length = each.value.external_ip_address_prefix_length
-        external_gateway_ip_address = var.openstack_external_subnet_pool_gateway
-    }
-}
-
+# The external IP moves onto Linux bridge brext0 and kolla gets veth vext1 instead of the external
+# interface, so the node keeps its external SSH and internet access while OVN builds br-ex.
+# utils/external_net.py arms a systemd timer that restores the original network unless the gateway
+# and the internet answer after the change.
 resource "null_resource" "install_reconfigure_network_controller" {
     depends_on = [
-        data.template_file.install_reconfigure_network_template_controller
+        null_resource.pre_check_iface_controller_node_external_vip
     ]
 
     connection {
@@ -407,30 +331,24 @@ resource "null_resource" "install_reconfigure_network_controller" {
         host     = var.controller_node_internal_ip_address
     }
 
-    provisioner "file" {
-        content     = data.template_file.install_reconfigure_network_template_controller.rendered
-        destination = "/etc/netplan/999-netplan_openstack.yaml"
-    }
-
     provisioner "remote-exec" {
         inline = [
             "#!/bin/bash",
-            "netplan apply"
+            "python3 -c 'import yaml' 2> /dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y python3-yaml",
+            "python3 ${local.openstack_tmp_dir}/utils/external_net.py prepare --ext-if ${var.controller_node_external_interface} --ext-cidr ${var.controller_node_external_ip_address}/${var.controller_node_external_ip_address_prefix_length} --gateway ${var.openstack_external_subnet_pool_gateway} --int-if ${var.controller_node_internal_interface} --int-cidr ${var.controller_node_internal_ip_address}/${var.controller_node_internal_ip_address_prefix_length}",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to prepare the external network.\"",
+            "  exit 1",
+            "fi"
         ]
-    }
-
-    provisioner "local-exec" {
-        command = <<-EOT
-        /bin/bash -c '
-        sleep ${local.network_reconfigure_wait_time_seconds}
-        '
-        EOT
     }
 }
 
 resource "null_resource" "install_reconfigure_network_compute" {
     depends_on = [
-        data.template_file.install_reconfigure_network_template_compute
+        null_resource.pre_check_iface_controller_node_external_vip,
+        null_resource.pre_check_iface_compute_node_internal_ip_prefix
     ]
 
     for_each = local.compute_nodes
@@ -442,24 +360,17 @@ resource "null_resource" "install_reconfigure_network_compute" {
         host     = each.value.internal_ip_address
     }
 
-    provisioner "file" {
-        content     = data.template_file.install_reconfigure_network_template_compute[each.key].rendered
-        destination = "/etc/netplan/999-netplan_openstack.yaml"
-    }
-
     provisioner "remote-exec" {
         inline = [
             "#!/bin/bash",
-            "netplan apply"
+            "python3 -c 'import yaml' 2> /dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y python3-yaml",
+            "python3 ${local.openstack_tmp_dir}/utils/external_net.py prepare --ext-if ${each.value.external_interface} --ext-cidr ${each.value.external_ip_address}/${each.value.external_ip_address_prefix_length} --gateway ${var.openstack_external_subnet_pool_gateway} --int-if ${each.value.internal_interface} --int-cidr ${each.value.internal_ip_address}/${each.value.internal_ip_address_prefix_length}",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to prepare the external network.\"",
+            "  exit 1",
+            "fi"
         ]
-    }
-
-    provisioner "local-exec" {
-        command = <<-EOT
-        /bin/bash -c '
-        sleep ${local.network_reconfigure_wait_time_seconds}
-        '
-        EOT
     }
 }
 
@@ -1027,10 +938,10 @@ resource "null_resource" "install_kolla_ansible_configure_kolla_ansible_global_v
             "sed -i 's/^#kolla_container_engine:.*/kolla_container_engine: \"podman\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^network_interface:.*/network_interface: '\"${var.controller_node_internal_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#network_interface:.*/network_interface: '\"${var.controller_node_internal_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
-            "sed -i 's/^kolla_external_vip_interface::.*/kolla_external_vip_interface: '\"${var.controller_node_external_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
-            "sed -i 's/^#kolla_external_vip_interface:.*/kolla_external_vip_interface: '\"${var.controller_node_external_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
-            "sed -i 's/^neutron_external_interface:.*/neutron_external_interface: '\"${var.controller_node_external_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
-            "sed -i 's/^#neutron_external_interface:.*/neutron_external_interface: '\"${var.controller_node_external_interface}\"'/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^kolla_external_vip_interface:.*/kolla_external_vip_interface: \"brext0\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#kolla_external_vip_interface:.*/kolla_external_vip_interface: \"brext0\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^neutron_external_interface:.*/neutron_external_interface: \"vext1\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^#neutron_external_interface:.*/neutron_external_interface: \"vext1\"/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^kolla_internal_vip_address:.*/kolla_internal_vip_address: '\"${var.openstack_vip_internal}\"'/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^#kolla_internal_vip_address:.*/kolla_internal_vip_address: '\"${var.openstack_vip_internal}\"'/g' /etc/kolla/globals.d/globals.yml",
             "sed -i 's/^kolla_external_vip_address:.*/kolla_external_vip_address: '\"${var.openstack_vip_external}\"'/g' /etc/kolla/globals.d/globals.yml",
@@ -1393,19 +1304,15 @@ resource "null_resource" "deploy_openstack_configure_external_interface_controll
     provisioner "remote-exec" {
         inline = [
             "#!/bin/bash",
-            "echo \"[*] Configuring Controller Node's External Interface...\"",
-            "sed -i 's/'\"${var.controller_node_external_interface}\"'/br-ex/g' /etc/netplan/*.yaml",
-            "sed -i 's/'\"${var.openstack_vip_external}\"' dev '\"${var.controller_node_external_interface}\"'/'\"${var.openstack_vip_external}\"' dev br-ex/g' /etc/kolla/keepalived/keepalived.conf",
-            "echo \"    ${var.controller_node_external_interface}: {}\" >> /etc/netplan/999-netplan_openstack.yaml",
-            "netplan apply",
-            "ip address del ${var.controller_node_external_ip_address}/${var.controller_node_external_ip_address_prefix_length} dev ${var.controller_node_external_interface} > /dev/null 2>&1 | true",
-            "echo \"[*] Restarting keepalived to move the external VIP to br-ex...\"",
-            "systemctl restart kolla-keepalived-container.service",
+            "echo \"[*] Moving Controller Node's External Interface into br-ex...\"",
+            "/usr/local/sbin/openstack-external-net cutover --vip ${var.openstack_vip_external}",
             "STATUS=`echo $?`",
             "if [ $STATUS != 0 ]; then",
-            "  echo \"[!] Failed to restart keepalived.\"",
+            "  echo \"[!] Failed to move the external interface into br-ex. The node is back on brext0 and vext1.\"",
             "  exit 1",
-            "fi"
+            "fi",
+            "sed -i 's/^kolla_external_vip_interface:.*/kolla_external_vip_interface: \"br-ex\"/g' /etc/kolla/globals.d/globals.yml",
+            "sed -i 's/^neutron_external_interface:.*/neutron_external_interface: '\"${var.controller_node_external_interface}\"'/g' /etc/kolla/globals.d/globals.yml"
         ]
     }
 }
@@ -1427,11 +1334,13 @@ resource "null_resource" "deploy_openstack_configure_external_interface_compute_
     provisioner "remote-exec" {
         inline = [
             "#!/bin/bash",
-            "echo \"[*] Configuring Compute Node (${each.key})'s External Interface...\"",
-            "sed -i 's/'\"${each.value.external_interface}\"'/br-ex/g' /etc/netplan/*.yaml",
-            "echo \"    ${each.value.external_interface}: {}\" >> /etc/netplan/999-netplan_openstack.yaml",
-            "netplan apply",
-            "ip address del ${each.value.external_ip_address}/${each.value.external_ip_address_prefix_length} dev ${each.value.external_interface} > /dev/null 2>&1 | true"
+            "echo \"[*] Moving Compute Node (${each.key})'s External Interface into br-ex...\"",
+            "/usr/local/sbin/openstack-external-net cutover",
+            "STATUS=`echo $?`",
+            "if [ $STATUS != 0 ]; then",
+            "  echo \"[!] Failed to move the external interface into br-ex. The node is back on brext0 and vext1.\"",
+            "  exit 1",
+            "fi"
         ]
     }
 }

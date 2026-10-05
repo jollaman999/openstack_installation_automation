@@ -76,6 +76,12 @@
         - Internal
             - Controller 노드, Storage 노드와 통신 가능하도록 IP를 설정합니다.
     - SSH 서버 설치 및 root 계정 패스워드 로그인 활성화 (Controller 노드와 동일한 패스워드 설정)
+- External / Internal 인터페이스는 일반 NIC 뿐 아니라 bond(예: bond0, bond1)도 지정할 수 있습니다. 기존 netplan 설정의 bond 구성은 그대로 두고 IP 설정만 옮깁니다.
+- 설치 중에도 External IP 로 접속한 SSH 와 노드의 인터넷 연결이 유지됩니다.
+    - 설치 초반에 External IP 를 Linux bridge `brext0` 로 옮기고, kolla-ansible 에는 veth `vext1` 을 External 인터페이스로 넘깁니다.
+    - OpenStack 배포가 끝나면 External 인터페이스를 `br-ex` 에 넣고 IP 를 `br-ex` 로 옮긴 뒤 `brext0` 와 veth 를 지웁니다.
+    - 각 단계는 Gateway 와 인터넷 연결을 확인하고, 실패하거나 120초 안에 확인이 끝나지 않으면 이전 네트워크 설정으로 자동 복원합니다.
+    - 설치 전 netplan 설정은 `/var/lib/openstack-external-net/netplan.pre-openstack/` 에 백업됩니다.
 - Storage 노드
     - NIC
         - Internal
@@ -215,9 +221,9 @@ openstack_nova_compute_instances_nfs_target = "172.29.0.10:/Storage/openstack/in
         
     - controller_node_external_interface
         
-        Controller 노드의 외부 인터페이스명을 설정합니다.
+        Controller 노드의 외부 인터페이스명을 설정합니다. bond 도 지정할 수 있습니다.
         
-        예시 : “eno2”
+        예시 : “eno2”, “bond1”
         
 - 설치 방식 관련 설정
     - all_in_one
